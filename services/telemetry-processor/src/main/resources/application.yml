@@ -1,0 +1,144 @@
+spring:
+  application:
+    name: telemetry-processor
+  datasource:
+    url: ${PULSESTREAM_POSTGRES_URL:jdbc:postgresql://localhost:5432/pulsestream}
+    username: ${PULSESTREAM_POSTGRES_USERNAME:pulsestream}
+    password: ${PULSESTREAM_POSTGRES_PASSWORD:pulsestream}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database: postgresql
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        boot:
+          allow_jdbc_metadata_access: false
+        default_schema: platform
+  kafka:
+    bootstrap-servers: ${PULSESTREAM_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${PULSESTREAM_KAFKA_CONSUMER_GROUP_ID:telemetry-processor}
+      auto-offset-reset: ${PULSESTREAM_KAFKA_CONSUMER_AUTO_OFFSET_RESET:earliest}
+      key-deserializer: ${PULSESTREAM_KAFKA_CONSUMER_KEY_DESERIALIZER:org.apache.kafka.common.serialization.StringDeserializer}
+      value-deserializer: ${PULSESTREAM_KAFKA_CONSUMER_VALUE_DESERIALIZER:org.springframework.kafka.support.serializer.JsonDeserializer}
+      properties:
+        spring.json.trusted.packages: ${PULSESTREAM_KAFKA_CONSUMER_TRUSTED_PACKAGES:com.pulsestream.processor.model}
+        spring.json.use.type.headers: ${PULSESTREAM_KAFKA_CONSUMER_USE_TYPE_HEADERS:false}
+        spring.json.value.default.type: ${PULSESTREAM_KAFKA_CONSUMER_VALUE_DEFAULT_TYPE:com.pulsestream.processor.model.TelemetryEvent}
+    listener:
+      ack-mode: record
+
+server:
+  port: 8082
+
+management:
+  # The DLQ replay endpoint (#125) is state-changing and there is no authentication in front of the
+  # service yet, so the management surface is served on its own port bound to loopback by default
+  # rather than on the main service port. This keeps start/stop of bulk replay reachable only from
+  # the host (operators triggering it locally), not from anyone able to reach the service port.
+  # Override PULSESTREAM_MANAGEMENT_ADDRESS to expose it once an auth/network policy is in place.
+  server:
+    port: ${PULSESTREAM_MANAGEMENT_PORT:9083}
+    address: ${PULSESTREAM_MANAGEMENT_ADDRESS:127.0.0.1}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,dlqreplay
+  endpoint:
+    health:
+      show-details: never
+      # The full actuator surface (including the state-changing dlqreplay endpoint)
+      # stays on the loopback-bound management port above. `add-additional-paths`
+      # mirrors only the liveness/readiness probe groups to /livez and /readyz on
+      # the main server port, so kubelet can reach the probes over the pod network
+      # without exposing dlqreplay. See infrastructure/kubernetes/telemetry-processor/deployment.yaml.
+      probes:
+        enabled: true
+        add-additional-paths: true
+  health:
+    db:
+      enabled: ${PULSESTREAM_DB_HEALTH_ENABLED:false}
+
+logging:
+  level:
+    root: INFO
+    com.pulsestream.processor: INFO
+  pattern:
+    level: "%5p [${spring.application.name:},trace_id=%X{trace_id:-},span_id=%X{span_id:-}]"
+
+otel:
+  # W3C trace context is propagated over HTTP headers so trace IDs stay
+  # consistent across services. `baggage` is enabled to carry contextual
+  # metadata and to prepare for Kafka propagation in a later issue.
+  propagators: ${PULSESTREAM_OTEL_PROPAGATORS:tracecontext,baggage}
+  traces:
+    exporter: ${PULSESTREAM_OTEL_TRACES_EXPORTER:otlp}
+  metrics:
+    exporter: none
+  logs:
+    exporter: none
+  exporter:
+    otlp:
+      endpoint: ${PULSESTREAM_OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}
+      protocol: http/protobuf
+
+pulsestream:
+  kafka:
+    bootstrap-servers: ${PULSESTREAM_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${PULSESTREAM_KAFKA_CONSUMER_GROUP_ID:telemetry-processor}
+      dlq-group-id: ${PULSESTREAM_KAFKA_CONSUMER_DLQ_GROUP_ID:telemetry-processor-dlq-replay}
+      key-deserializer: ${PULSESTREAM_KAFKA_CONSUMER_KEY_DESERIALIZER:org.apache.kafka.common.serialization.StringDeserializer}
+      value-deserializer: ${PULSESTREAM_KAFKA_CONSUMER_VALUE_DESERIALIZER:org.springframework.kafka.support.serializer.JsonDeserializer}
+      auto-offset-reset: ${PULSESTREAM_KAFKA_CONSUMER_AUTO_OFFSET_RESET:earliest}
+      concurrency: ${PULSESTREAM_KAFKA_CONSUMER_CONCURRENCY:1}
+      # Fallback idle signal for bounded DLQ replay (#125). The listener normally stops when it
+      # reaches the per-partition end offsets captured at trigger time; if it goes idle before
+      # reaching them (for example, tail records removed by retention), this timeout stops it.
+      dlq-replay-idle-timeout: ${PULSESTREAM_KAFKA_DLQ_REPLAY_IDLE_TIMEOUT:30s}
+      properties:
+        spring.json.trusted.packages: ${PULSESTREAM_KAFKA_CONSUMER_TRUSTED_PACKAGES:com.pulsestream.processor.model}
+        spring.json.use.type.headers: ${PULSESTREAM_KAFKA_CONSUMER_USE_TYPE_HEADERS:false}
+        spring.json.value.default.type: ${PULSESTREAM_KAFKA_CONSUMER_VALUE_DEFAULT_TYPE:com.pulsestream.processor.model.TelemetryEvent}
+    producer:
+      client-id: ${PULSESTREAM_KAFKA_PRODUCER_CLIENT_ID:telemetry-processor-producer}
+      key-serializer: ${PULSESTREAM_KAFKA_PRODUCER_KEY_SERIALIZER:org.apache.kafka.common.serialization.StringSerializer}
+      value-serializer: ${PULSESTREAM_KAFKA_PRODUCER_VALUE_SERIALIZER:org.springframework.kafka.support.serializer.JsonSerializer}
+      acknowledgements: ${PULSESTREAM_KAFKA_PRODUCER_ACKS:all}
+      retries: ${PULSESTREAM_KAFKA_PRODUCER_RETRIES:3}
+      delivery-timeout: ${PULSESTREAM_KAFKA_PRODUCER_DELIVERY_TIMEOUT:30s}
+      publish-timeout: ${PULSESTREAM_KAFKA_PRODUCER_PUBLISH_TIMEOUT:5s}
+      properties: {}
+    topics:
+      raw: ${PULSESTREAM_KAFKA_TOPIC_RAW:telemetry.events.raw}
+      processed: ${PULSESTREAM_KAFKA_TOPIC_PROCESSED:telemetry.events.processed}
+      anomalies: ${PULSESTREAM_KAFKA_TOPIC_ANOMALIES:telemetry.events.anomalies}
+      dlq: ${PULSESTREAM_KAFKA_TOPIC_DLQ:telemetry.events.dlq}
+  detection:
+    # Heuristic anomaly rules. query-service reads the same variables to describe them on the console,
+    # so set them for both services when overriding.
+    max-temperature: ${PULSESTREAM_DETECTION_MAX_TEMPERATURE:80}
+    min-temperature: ${PULSESTREAM_DETECTION_MIN_TEMPERATURE:-40}
+    spike-ratio: ${PULSESTREAM_DETECTION_SPIKE_RATIO:0.5}
+    # Safe operating bands for every other metric this platform sees, same heuristic-threshold
+    # pattern as temperature above. Defaults are named engineering references, not guesses:
+    # humidity/pressure/level are standard industrial warehouse bands, vibration follows ISO 10816
+    # (>4.5 mm/s RMS is its "unsatisfactory" zone for this machine class), co2 follows ASHRAE/OSHA
+    # indoor-air guidance (>1000 ppm signals poor ventilation). All overridable per deployment. A
+    # metric missing here still gets spike detection, just no absolute-range check.
+    metric-ranges:
+      humidity:
+        min: ${PULSESTREAM_DETECTION_HUMIDITY_MIN:20}
+        max: ${PULSESTREAM_DETECTION_HUMIDITY_MAX:80}
+      pressure:
+        min: ${PULSESTREAM_DETECTION_PRESSURE_MIN:950}
+        max: ${PULSESTREAM_DETECTION_PRESSURE_MAX:1050}
+      level:
+        min: ${PULSESTREAM_DETECTION_LEVEL_MIN:10}
+        max: ${PULSESTREAM_DETECTION_LEVEL_MAX:95}
+      vibration:
+        max: ${PULSESTREAM_DETECTION_VIBRATION_MAX:4.5}
+      co2:
+        max: ${PULSESTREAM_DETECTION_CO2_MAX:1000}

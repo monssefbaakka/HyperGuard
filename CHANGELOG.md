@@ -15,3 +15,5 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Configurable anomaly detection rules (temperature band, per-metric ranges, spike ratio).
 - Telemetry processor build (`pom.xml`) and runtime configuration (`application.yml`).
 - Tests for anomaly detection and incident correlation.
+- Maven wrapper for the telemetry processor.
+- Kafka telemetry event envelope and event normalization ahead of anomaly detection.

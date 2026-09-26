@@ -8,6 +8,9 @@ Running log of day-to-day notes on the HyperGuard Sentinel project — what chan
   thresholds (`pulsestream.detection.*`) and the detection service the incident layer depends on.
 - Added the processor's entry point, `pom.xml` and `application.yml`, so the slice now builds.
 - Added tests for detection and incident correlation — 22 tests, all passing.
+- Added the Maven wrapper and `.gitignore` to the processor; `./mvnw test` now runs from this repo.
+- Brought in the Kafka event envelope (`TelemetryEvent`, `TelemetryAnomalyEvent`) and the
+  normalization step in front of detection — processor suite at 27 tests, all passing.
 
 ## 2026-09-22
 

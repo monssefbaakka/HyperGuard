@@ -2,6 +2,15 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-09-27
+
+- Brought in the processor's Kafka publishing layer: typed `pulsestream.kafka.*` properties,
+  the producer factory / `KafkaTemplate` configuration and a dedicated publishing exception.
+- Added the processed and anomaly telemetry publishers, which fail with a controlled
+  `TelemetryPublishingException` when a send fails or times out.
+- Added `.gitattributes` so `mvnw` keeps LF and `mvnw.cmd` keeps CRLF line endings.
+- Processor suite at 44 tests, all passing.
+
 ## 2026-09-26
 
 - Brought the anomaly detection rules into the telemetry processor: result model, configurable

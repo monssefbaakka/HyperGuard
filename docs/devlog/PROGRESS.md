@@ -2,6 +2,14 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-09-29
+
+- Brought in processed telemetry persistence: `ProcessedTelemetryEntity`, its repository and the
+  persistence service. Redelivered duplicates are a no-op; an explicit replay replaces the record.
+- Added `TelemetryProcessingService` (normalize, persist, publish to the processed topic) and
+  `AnomalyProcessingService` (build and publish the anomaly envelope).
+- Processor suite at 58 tests, all passing — including an H2-backed repository test.
+
 ## 2026-09-27
 
 - Brought in the processor's Kafka publishing layer: typed `pulsestream.kafka.*` properties,

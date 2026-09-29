@@ -19,3 +19,5 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Kafka telemetry event envelope and event normalization ahead of anomaly detection.
 - Kafka producer configuration and typed Kafka properties for the telemetry processor.
 - Processed and anomaly telemetry publishers with tests.
+- Processed telemetry persistence (`ProcessedTelemetryEntity`, repository, persistence service).
+- Telemetry and anomaly processing services with tests.

@@ -24,3 +24,4 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Dead letter publishing for telemetry events that fail processing (`telemetry.events.dlq`).
 - DLQ replay session with per-partition offset boundaries and replay headers.
 - Kafka consumer configuration and the telemetry event consumer driving the processing pipeline.
+- Dead letter replay: boundary snapshotting, replay publishing and the bounded replay consumer.

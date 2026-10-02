@@ -11,6 +11,12 @@ Running log of day-to-day notes on the HyperGuard Sentinel project — what chan
 - Added `KafkaConsumerConfiguration` and `TelemetryEventConsumer`, which wires the pipeline the
   earlier slices built: normalize, detect, persist, publish, DLQ on failure.
 - Processor suite at 71 tests, all passing.
+- Completed the DLQ replay path: `ReplayEventPublisher` republishes a dead lettered event onto the
+  raw topic with replay headers, `DlqReplayBoundarySnapshotter` reads the end offsets before a
+  replay starts, and `DlqReplayService` opens the session and resumes the dead letter listener.
+- `DeadLetterEventConsumer` drains the session and stops once every partition reaches its boundary,
+  so a replay cannot loop on records it wrote itself.
+- Processor suite at 118 tests, all passing.
 
 ## 2026-09-29
 

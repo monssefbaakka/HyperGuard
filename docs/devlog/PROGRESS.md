@@ -2,6 +2,16 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-10-02
+
+- Brought in the dead letter path: `DeadLetterEvent` and `DeadLetterPublisher` route a failed
+  telemetry event to `telemetry.events.dlq` with its failure reason, instead of dropping it.
+- Added the DLQ replay session (`DlqReplaySession`, `DlqReplayPartitionRange`, `ReplayHeaders`), so
+  a replay drains the offset range captured when it started and stops at that boundary.
+- Added `KafkaConsumerConfiguration` and `TelemetryEventConsumer`, which wires the pipeline the
+  earlier slices built: normalize, detect, persist, publish, DLQ on failure.
+- Processor suite at 71 tests, all passing.
+
 ## 2026-09-29
 
 - Brought in processed telemetry persistence: `ProcessedTelemetryEntity`, its repository and the

@@ -25,3 +25,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - DLQ replay session with per-partition offset boundaries and replay headers.
 - Kafka consumer configuration and the telemetry event consumer driving the processing pipeline.
 - Dead letter replay: boundary snapshotting, replay publishing and the bounded replay consumer.
+- DLQ replay actuator endpoint (`/actuator/dlq-replay`) for reading replay status and starting a replay.
+- Shared test profile (`application-test.yml`) for context tests without Kafka or a database.
+- Actuator, probe, deserialization, entity and replay integration tests completing the telemetry
+  processor migration (143 tests).

@@ -2,6 +2,18 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-10-03
+
+- Exposed the DLQ replay actuator endpoint (`/actuator/dlq-replay`): operators can read the replay
+  status and trigger a bounded replay without a shell on the pod.
+- Added a shared test profile (`application-test.yml`) that excludes Kafka autoconfiguration and
+  moves the management surface to its own random port, so context tests need no infrastructure.
+- Closed the processor's remaining test gaps: endpoint unit + HTTP integration tests, liveness and
+  readiness probes, JPA availability, context startup, entity mapping, event deserialization,
+  dead letter replay redelivery and concurrent replay rejection.
+- Processor suite at 143 tests, all passing (`./mvnw test`).
+- The telemetry processor is now fully migrated into this repository.
+
 ## 2026-10-02
 
 - Brought in the dead letter path: `DeadLetterEvent` and `DeadLetterPublisher` route a failed

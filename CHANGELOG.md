@@ -29,3 +29,4 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Shared test profile (`application-test.yml`) for context tests without Kafka or a database.
 - Actuator, probe, deserialization, entity and replay integration tests completing the telemetry
   processor migration (143 tests).
+- Ingestion service build, Maven wrapper, entry point, configuration and telemetry event models.

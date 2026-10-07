@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: ingestion-service
+
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+      # Expose the Kubernetes liveness/readiness health groups and mirror them to
+      # /livez and /readyz on the main server port, so the Deployment probes align
+      # with Spring Boot Actuator instead of hitting the aggregate /actuator/health
+      # (a failing dependency in the aggregate would otherwise fail liveness and
+      # trigger pointless restarts). See infrastructure/kubernetes/*/deployment.yaml.
+      probes:
+        enabled: true
+        add-additional-paths: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.pulsestream.ingestion: INFO
+  pattern:
+    level: "%5p [${spring.application.name:},trace_id=%X{trace_id:-},span_id=%X{span_id:-}]"
+
+otel:
+  # W3C trace context is propagated over HTTP headers so trace IDs stay
+  # consistent across services. `baggage` is enabled to carry contextual
+  # metadata and to prepare for Kafka propagation in a later issue.
+  propagators: ${PULSESTREAM_OTEL_PROPAGATORS:tracecontext,baggage}
+  traces:
+    exporter: ${PULSESTREAM_OTEL_TRACES_EXPORTER:otlp}
+  metrics:
+    exporter: none
+  logs:
+    exporter: none
+  exporter:
+    otlp:
+      endpoint: ${PULSESTREAM_OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}
+      protocol: http/protobuf
+
+pulsestream:
+  kafka:
+    bootstrap-servers: ${PULSESTREAM_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      client-id: ${PULSESTREAM_KAFKA_PRODUCER_CLIENT_ID:ingestion-service-producer}
+      key-serializer: ${PULSESTREAM_KAFKA_PRODUCER_KEY_SERIALIZER:org.apache.kafka.common.serialization.StringSerializer}
+      value-serializer: ${PULSESTREAM_KAFKA_PRODUCER_VALUE_SERIALIZER:org.springframework.kafka.support.serializer.JsonSerializer}
+      acknowledgements: ${PULSESTREAM_KAFKA_PRODUCER_ACKNOWLEDGEMENTS:all}
+      retries: ${PULSESTREAM_KAFKA_PRODUCER_RETRIES:3}
+      delivery-timeout: ${PULSESTREAM_KAFKA_PRODUCER_DELIVERY_TIMEOUT:30s}
+      publish-timeout: ${PULSESTREAM_KAFKA_PRODUCER_PUBLISH_TIMEOUT:5s}
+      properties: {}
+    topics:
+      raw: telemetry.events.raw
+      processed: telemetry.events.processed
+      anomalies: telemetry.events.anomalies
+      dlq: telemetry.events.dlq

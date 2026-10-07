@@ -2,6 +2,12 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-10-06
+
+- Started migrating the ingestion service: Maven build and wrapper, application entry point,
+  `application.yml` (Kafka, actuator, Prometheus export) and the telemetry event / payload models.
+- The slice compiles on its own (`./mvnw compile`); controllers, DTOs and the Kafka producer follow.
+
 ## 2026-10-03
 
 - Exposed the DLQ replay actuator endpoint (`/actuator/dlq-replay`): operators can read the replay

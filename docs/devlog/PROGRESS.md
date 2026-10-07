@@ -2,6 +2,11 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-10-07
+
+- Added the ingestion service's Kafka producer path: typed properties, producer configuration, `KafkaProducerService` with dead letter routing and `TelemetryPublishingException`.
+- Added tests for the producer configuration and service — 11 tests, all passing.
+
 ## 2026-10-06
 
 - Started migrating the ingestion service: Maven build and wrapper, application entry point,

@@ -31,3 +31,5 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   processor migration (143 tests).
 - Ingestion service build, Maven wrapper, entry point, configuration and telemetry event models.
 - Ingestion service Kafka producer: typed properties, producer configuration and `KafkaProducerService` with dead letter routing.
+- Ingestion service REST API: validated telemetry request DTOs, event mapper, error handling, controller and Dockerfile.
+- Query service scaffold: Maven build, application entry point, README and Maven wrapper.

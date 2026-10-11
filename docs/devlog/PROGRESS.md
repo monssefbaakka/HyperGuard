@@ -2,6 +2,12 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-10-12
+
+- Finished the ingestion service: request DTOs with validation messages, event mapper, structured error handling, the `/api/v1/events` controller, trace-context tests and the Dockerfile.
+- Ingestion suite at 23 tests, all passing (`./mvnw test`).
+- Started the query service: Maven build (JPA, Kafka admin client, Prometheus), application entry point, README and Maven wrapper. The slice compiles (`./mvnw compile`); controllers, services and persistence follow.
+
 ## 2026-10-07
 
 - Added the ingestion service's Kafka producer path: typed properties, producer configuration, `KafkaProducerService` with dead letter routing and `TelemetryPublishingException`.

@@ -1,0 +1,158 @@
+package com.pulsestream.ingestion.controller;
+
+import com.pulsestream.ingestion.dto.TelemetryIngestionRequestDto;
+import com.pulsestream.ingestion.exception.TelemetryPublishingException;
+import com.pulsestream.ingestion.mapper.TelemetryEventMapper;
+import com.pulsestream.ingestion.model.TelemetryEvent;
+import com.pulsestream.ingestion.service.KafkaProducerService;
+import io.opentelemetry.api.OpenTelemetry;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.mockito.Mockito.when;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(TelemetryController.class)
+class TelemetryControllerTest {
+
+    @TestConfiguration
+    static class TracingTestConfig {
+        @Bean
+        OpenTelemetry openTelemetry() {
+            return OpenTelemetry.noop();
+        }
+    }
+
+    @MockBean
+    private TelemetryEventMapper telemetryEventMapper;
+
+    @MockBean
+    private KafkaProducerService kafkaProducerService;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    @DisplayName("should reject invalid telemetry request when required field is missing")
+    void shouldRejectInvalidTelemetryRequestWhenEventIdMissing() throws Exception {
+        String requestBody = """
+                {
+                  "tenantId": "factory-01",
+                  "eventType": "telemetry.reading",
+                  "timestamp": "2026-03-31T12:00:00Z",
+                  "source": "sensor-gateway",
+                  "version": "1.0",
+                  "payload": {
+                    "deviceId": "",
+                    "deviceType": "temperature-sensor",
+                    "metric": "temperature",
+                    "value": 28.4,
+                    "unit": "C",
+                    "location": "zone-a"
+                  }
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errors").isArray())
+                .andExpect(jsonPath("$.errors[?(@.field=='eventId')]").exists())
+                .andExpect(jsonPath("$.errors[?(@.field=='payload.deviceId')]").exists());
+
+        verifyNoInteractions(telemetryEventMapper);
+        verifyNoInteractions(kafkaProducerService);
+    }
+
+    @Test
+    @DisplayName("should accept valid telemetry request and invoke mapper")
+    void shouldAcceptValidTelemetryRequestAndInvokeMapper() throws Exception {
+        String requestBody = """
+        {
+          "eventId": "evt-001",
+          "tenantId": "factory-01",
+          "eventType": "telemetry.reading",
+          "timestamp": "2026-03-31T12:00:00Z",
+          "source": "sensor-gateway",
+          "version": "1.0",
+          "payload": {
+            "deviceId": "sensor-1042",
+            "deviceType": "temperature-sensor",
+            "metric": "temperature",
+            "value": 28.4,
+            "unit": "C",
+            "location": "zone-a"
+          }
+        }
+        """;
+
+        when(telemetryEventMapper.toModel(any(TelemetryIngestionRequestDto.class)))
+                .thenReturn(mock(TelemetryEvent.class));
+
+        mockMvc.perform(post("/api/v1/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isAccepted());
+
+
+        verify(telemetryEventMapper).toModel(any(TelemetryIngestionRequestDto.class));
+        verify(kafkaProducerService).publishTelemetryEvent(any(TelemetryEvent.class));
+    }
+
+    @Test
+    @DisplayName("should return controlled response when Kafka publishing fails")
+    void shouldReturnControlledResponseWhenKafkaPublishingFails() throws Exception {
+        String requestBody = """
+        {
+          "eventId": "evt-001",
+          "tenantId": "factory-01",
+          "eventType": "telemetry.reading",
+          "timestamp": "2026-03-31T12:00:00Z",
+          "source": "sensor-gateway",
+          "version": "1.0",
+          "payload": {
+            "deviceId": "sensor-1042",
+            "deviceType": "temperature-sensor",
+            "metric": "temperature",
+            "value": 28.4,
+            "unit": "C",
+            "location": "zone-a"
+          }
+        }
+        """;
+
+        TelemetryEvent telemetryEvent = mock(TelemetryEvent.class);
+        when(telemetryEventMapper.toModel(any(TelemetryIngestionRequestDto.class)))
+                .thenReturn(telemetryEvent);
+        doThrow(new TelemetryPublishingException(
+                "Failed to publish telemetry event to Kafka",
+                new RuntimeException("broker unavailable")
+        )).when(kafkaProducerService).publishTelemetryEvent(telemetryEvent);
+
+        mockMvc.perform(post("/api/v1/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.error").value("Service Unavailable"))
+                .andExpect(jsonPath("$.message")
+                        .value("Telemetry event could not be accepted because publishing is currently unavailable."));
+
+        verify(telemetryEventMapper).toModel(any(TelemetryIngestionRequestDto.class));
+        verify(kafkaProducerService).publishTelemetryEvent(telemetryEvent);
+    }
+}

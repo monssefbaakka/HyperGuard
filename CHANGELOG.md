@@ -36,3 +36,5 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Query service persistence model: anomaly, processed telemetry, incident, device quarantine,
   operator, operator session and operator avatar entities.
 - Query service API error response shape and resource/auth exception types.
+- Query service repositories and search specifications for anomalies, incidents, device
+  quarantine, processed telemetry, operators, operator sessions and operator avatars.

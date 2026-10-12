@@ -33,3 +33,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Ingestion service Kafka producer: typed properties, producer configuration and `KafkaProducerService` with dead letter routing.
 - Ingestion service REST API: validated telemetry request DTOs, event mapper, error handling, controller and Dockerfile.
 - Query service scaffold: Maven build, application entry point, README and Maven wrapper.
+- Query service persistence model: anomaly, processed telemetry, incident, device quarantine,
+  operator, operator session and operator avatar entities.
+- Query service API error response shape and resource/auth exception types.

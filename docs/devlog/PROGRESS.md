@@ -2,12 +2,26 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-10-13
+
+- Added the query service's service layer: anomaly/telemetry query, incident/quarantine,
+  platform metadata and Kafka topology services, the auth service, and the session
+  interceptor (`ApiAuthenticationInterceptor`) wired into `WebConfiguration`. The slice
+  compiles (`./mvnw compile`); only controllers remain for query-service.
+- Added the query service's remaining read DTOs: dashboard summary (`ActivityBucketDto`,
+  `DeviceSummaryDto`, `SummaryDto`, `FacetsDto`), time-series (`MetricSeriesDto`,
+  `SeriesPointDto`), the generic `PageResponseDto`, `KafkaTopologyDto`, and the auth
+  (`AuthDtos`) and incident/quarantine (`IncidentDtos`) request/response shapes. The slice
+  compiles (`./mvnw compile`); services, security and controllers are next.
+- Added the query service's typed configuration: `pulsestream.auth/.query/.topology/.platform` property classes, the Kafka `AdminClient` configuration, the global exception handler mapping resource/auth exceptions to `ErrorResponse`, the platform-config/anomaly/telemetry record DTOs, and `application.yml`. The slice compiles (`./mvnw compile`); services, security and controllers are next.
+
 ## 2026-10-12
 
 - Finished the ingestion service: request DTOs with validation messages, event mapper, structured error handling, the `/api/v1/events` controller, trace-context tests and the Dockerfile.
 - Ingestion suite at 23 tests, all passing (`./mvnw test`).
 - Started the query service: Maven build (JPA, Kafka admin client, Prometheus), application entry point, README and Maven wrapper. The slice compiles (`./mvnw compile`); controllers, services and persistence follow.
 - Brought in the query service's persistence model: JPA entities for anomalies, processed telemetry, incidents, device quarantine, operators, operator sessions and operator avatars, plus the API error response shape and the not-found/conflict/auth exceptions the handler will map to it. The slice compiles (`./mvnw compile`).
+- Added the Spring Data repositories and `Specification` builders for anomalies, incidents, device quarantine, processed telemetry and operators/sessions/avatars. The slice compiles (`./mvnw compile`); services and controllers are next.
 
 ## 2026-10-07
 

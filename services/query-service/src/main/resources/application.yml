@@ -1,0 +1,117 @@
+spring:
+  application:
+    name: query-service
+  datasource:
+    url: ${PULSESTREAM_POSTGRES_URL:jdbc:postgresql://localhost:5432/pulsestream}
+    username: ${PULSESTREAM_POSTGRES_USERNAME:pulsestream}
+    password: ${PULSESTREAM_POSTGRES_PASSWORD:pulsestream}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database: postgresql
+    open-in-view: false
+    hibernate:
+      # The schema is owned by infrastructure/docker/postgres/init.sql; the read side never
+      # generates or mutates it.
+      ddl-auto: none
+    properties:
+      hibernate:
+        boot:
+          allow_jdbc_metadata_access: false
+        default_schema: platform
+  servlet:
+    multipart:
+      # The console resizes a profile photo in the browser before upload; this is a ceiling, not a target.
+      max-file-size: 2MB
+      max-request-size: 2MB
+
+pulsestream:
+  auth:
+    # Console sign-in. Sessions are opaque tokens stored hashed in platform.operator_sessions.
+    session-ttl: ${PULSESTREAM_AUTH_SESSION_TTL:12h}
+    # Set to false once the operators who need the console have their accounts.
+    registration-enabled: ${PULSESTREAM_AUTH_REGISTRATION_ENABLED:true}
+    max-avatar-bytes: ${PULSESTREAM_AUTH_MAX_AVATAR_BYTES:1048576}
+  query:
+    # Maximum page size a client may request on the paged read endpoints, so a single call cannot
+    # pull the whole table into memory.
+    max-page-size: ${PULSESTREAM_QUERY_MAX_PAGE_SIZE:500}
+    # Maximum number of points returned by the time-series endpoint.
+    max-series-points: ${PULSESTREAM_QUERY_MAX_SERIES_POINTS:2000}
+    # Browser origins allowed to call the read API. The web UI dev server runs on 5173 and the
+    # containerised UI on 8090; override for any other deployment.
+    cors-allowed-origins: ${PULSESTREAM_QUERY_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:8090,http://127.0.0.1:8090}
+  topology:
+    # Read-only AdminClient behind /api/v1/topology/kafka. Only topics under `topic-prefix` are
+    # described, and per-partition lag is reported for `primary-group` — the group the processor
+    # consumes the raw topic with.
+    bootstrap-servers: ${PULSESTREAM_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    topic-prefix: ${PULSESTREAM_TOPOLOGY_TOPIC_PREFIX:telemetry.}
+    primary-group: ${PULSESTREAM_TOPOLOGY_PRIMARY_GROUP:telemetry-processor}
+    timeout: ${PULSESTREAM_TOPOLOGY_TIMEOUT:3s}
+  platform:
+    # Served to the console by GET /api/v1/platform/config so these values are not baked into the UI.
+    environment: ${PULSESTREAM_PLATFORM_ENVIRONMENT:Local · Docker Compose}
+    stale-after: ${PULSESTREAM_PLATFORM_STALE_AFTER:15m}
+    auto-refresh: ${PULSESTREAM_PLATFORM_AUTO_REFRESH:30s}
+    readings-refresh: ${PULSESTREAM_PLATFORM_READINGS_REFRESH:10s}
+    # The groups below describe settings owned by ingestion-service and telemetry-processor. They bind
+    # the same environment variables (and defaults) those services read, so one override covers all.
+    topics:
+      raw: ${PULSESTREAM_KAFKA_TOPIC_RAW:telemetry.events.raw}
+      processed: ${PULSESTREAM_KAFKA_TOPIC_PROCESSED:telemetry.events.processed}
+      anomalies: ${PULSESTREAM_KAFKA_TOPIC_ANOMALIES:telemetry.events.anomalies}
+      dlq: ${PULSESTREAM_KAFKA_TOPIC_DLQ:telemetry.events.dlq}
+    producer:
+      acknowledgements: ${PULSESTREAM_KAFKA_PRODUCER_ACKNOWLEDGEMENTS:all}
+      retries: ${PULSESTREAM_KAFKA_PRODUCER_RETRIES:3}
+      publish-timeout: ${PULSESTREAM_KAFKA_PRODUCER_PUBLISH_TIMEOUT:5s}
+      delivery-timeout: ${PULSESTREAM_KAFKA_PRODUCER_DELIVERY_TIMEOUT:30s}
+    consumer:
+      # telemetry-processor sets spring.kafka.listener.ack-mode to record without an override variable.
+      ack-mode: record
+      auto-offset-reset: ${PULSESTREAM_KAFKA_CONSUMER_AUTO_OFFSET_RESET:earliest}
+      concurrency: ${PULSESTREAM_KAFKA_CONSUMER_CONCURRENCY:1}
+      dlq-group-id: ${PULSESTREAM_KAFKA_CONSUMER_DLQ_GROUP_ID:telemetry-processor-dlq-replay}
+      dlq-replay-idle-timeout: ${PULSESTREAM_KAFKA_DLQ_REPLAY_IDLE_TIMEOUT:30s}
+    detection:
+      max-temperature: ${PULSESTREAM_DETECTION_MAX_TEMPERATURE:80}
+      min-temperature: ${PULSESTREAM_DETECTION_MIN_TEMPERATURE:-40}
+      spike-ratio: ${PULSESTREAM_DETECTION_SPIKE_RATIO:0.5}
+      # Least to most severe, matching telemetry-processor's AnomalySeverity enum.
+      severities: NONE,WARNING,CRITICAL
+
+server:
+  port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+      # Expose the Kubernetes liveness/readiness health groups and mirror them to
+      # /livez and /readyz on the main server port, so the Deployment probes align
+      # with Spring Boot Actuator instead of hitting the aggregate /actuator/health
+      # (a failing dependency in the aggregate would otherwise fail liveness and
+      # trigger pointless restarts). See infrastructure/kubernetes/*/deployment.yaml.
+      probes:
+        enabled: true
+        add-additional-paths: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    distribution:
+      # See ingestion-service: publishes latency buckets so Prometheus can compute a real percentile.
+      percentiles-histogram:
+        http.server.requests: true
+
+logging:
+  level:
+    root: INFO
+    com.pulsestream.query: INFO
+  pattern:
+    level: "%5p [${spring.application.name:},trace_id=%X{trace_id:-},span_id=%X{span_id:-}]"

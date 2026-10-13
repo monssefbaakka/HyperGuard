@@ -36,3 +36,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Query service persistence model: anomaly, processed telemetry, incident, device quarantine,
   operator, operator session and operator avatar entities.
 - Query service API error response shape and resource/auth exception types.
+- Query service repositories and search specifications for anomalies, incidents, device
+  quarantine, processed telemetry, operators, operator sessions and operator avatars.
+- Query service typed configuration (auth, query limits, Kafka topology, platform metadata),
+  Kafka admin client configuration, global exception handler, platform-config/anomaly/telemetry
+  record DTOs and `application.yml`.
+- Query service dashboard summary, time-series, paged-response, Kafka topology, auth and
+  incident/quarantine read DTOs.
+- Query service services (anomaly/telemetry query, incident, quarantine, platform metadata,
+  Kafka topology, auth) and the session interceptor wired into the servlet pipeline.

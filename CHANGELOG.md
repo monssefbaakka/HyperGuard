@@ -41,3 +41,5 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Query service typed configuration (auth, query limits, Kafka topology, platform metadata),
   Kafka admin client configuration, global exception handler, platform-config/anomaly/telemetry
   record DTOs and `application.yml`.
+- Query service dashboard summary, time-series, paged-response, Kafka topology, auth and
+  incident/quarantine read DTOs.

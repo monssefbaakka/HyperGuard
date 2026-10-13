@@ -4,6 +4,11 @@ Running log of day-to-day notes on the HyperGuard Sentinel project — what chan
 
 ## 2026-10-13
 
+- Added the query service's remaining read DTOs: dashboard summary (`ActivityBucketDto`,
+  `DeviceSummaryDto`, `SummaryDto`, `FacetsDto`), time-series (`MetricSeriesDto`,
+  `SeriesPointDto`), the generic `PageResponseDto`, `KafkaTopologyDto`, and the auth
+  (`AuthDtos`) and incident/quarantine (`IncidentDtos`) request/response shapes. The slice
+  compiles (`./mvnw compile`); services, security and controllers are next.
 - Added the query service's typed configuration: `pulsestream.auth/.query/.topology/.platform` property classes, the Kafka `AdminClient` configuration, the global exception handler mapping resource/auth exceptions to `ErrorResponse`, the platform-config/anomaly/telemetry record DTOs, and `application.yml`. The slice compiles (`./mvnw compile`); services, security and controllers are next.
 
 ## 2026-10-12

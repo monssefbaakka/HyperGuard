@@ -38,3 +38,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Query service API error response shape and resource/auth exception types.
 - Query service repositories and search specifications for anomalies, incidents, device
   quarantine, processed telemetry, operators, operator sessions and operator avatars.
+- Query service typed configuration (auth, query limits, Kafka topology, platform metadata),
+  Kafka admin client configuration, global exception handler, platform-config/anomaly/telemetry
+  record DTOs and `application.yml`.

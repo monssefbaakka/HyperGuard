@@ -7,6 +7,7 @@ Running log of day-to-day notes on the HyperGuard Sentinel project — what chan
 - Finished the ingestion service: request DTOs with validation messages, event mapper, structured error handling, the `/api/v1/events` controller, trace-context tests and the Dockerfile.
 - Ingestion suite at 23 tests, all passing (`./mvnw test`).
 - Started the query service: Maven build (JPA, Kafka admin client, Prometheus), application entry point, README and Maven wrapper. The slice compiles (`./mvnw compile`); controllers, services and persistence follow.
+- Brought in the query service's persistence model: JPA entities for anomalies, processed telemetry, incidents, device quarantine, operators, operator sessions and operator avatars, plus the API error response shape and the not-found/conflict/auth exceptions the handler will map to it. The slice compiles (`./mvnw compile`).
 
 ## 2026-10-07
 

@@ -4,6 +4,10 @@ Running log of day-to-day notes on the HyperGuard Sentinel project — what chan
 
 ## 2026-10-13
 
+- Added the query service's service layer: anomaly/telemetry query, incident/quarantine,
+  platform metadata and Kafka topology services, the auth service, and the session
+  interceptor (`ApiAuthenticationInterceptor`) wired into `WebConfiguration`. The slice
+  compiles (`./mvnw compile`); only controllers remain for query-service.
 - Added the query service's remaining read DTOs: dashboard summary (`ActivityBucketDto`,
   `DeviceSummaryDto`, `SummaryDto`, `FacetsDto`), time-series (`MetricSeriesDto`,
   `SeriesPointDto`), the generic `PageResponseDto`, `KafkaTopologyDto`, and the auth

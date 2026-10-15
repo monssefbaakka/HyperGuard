@@ -2,6 +2,12 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-10-15
+
+- Added the query service's controllers: anomaly/telemetry query, auth, platform, metadata,
+  topology, incident and quarantine, plus the shared `SortDirections` constants and the
+  Dockerfile. The slice compiles (`./mvnw compile`); only tests remain for query-service.
+
 ## 2026-10-13
 
 - Added the query service's service layer: anomaly/telemetry query, incident/quarantine,

@@ -45,3 +45,5 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   incident/quarantine read DTOs.
 - Query service services (anomaly/telemetry query, incident, quarantine, platform metadata,
   Kafka topology, auth) and the session interceptor wired into the servlet pipeline.
+- Query service controllers (anomaly/telemetry query, auth, platform, metadata, topology,
+  incident, quarantine), shared `SortDirections` constants and the Dockerfile.

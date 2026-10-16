@@ -2,6 +2,14 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
 
+## 2026-10-16
+
+- Added the query service's application smoke test, auth interceptor and auth controller tests,
+  anomaly/telemetry/metadata/platform controller tests, and an auth service test, plus the
+  shared test profile and `.dockerignore`. Suite: 43 tests, all passing
+  (`./mvnw test`). Remaining in query-service: anomaly/incident/platform-metadata/quarantine/
+  telemetry-query service tests and their shared fixture helper.
+
 ## 2026-10-15
 
 - Added the query service's controllers: anomaly/telemetry query, auth, platform, metadata,

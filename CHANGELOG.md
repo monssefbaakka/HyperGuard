@@ -49,3 +49,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   incident, quarantine), shared `SortDirections` constants and the Dockerfile.
 - Query service application smoke test, auth interceptor and controller tests, auth service
   test, shared test profile and `.dockerignore`.
+- Local Docker Compose stack for development environment: Zookeeper, Kafka, PostgreSQL, Redis, Prometheus, Grafana, and Jaeger (infrastructure/docker/docker-compose.yml, .env.example, README.md).
+- PostgreSQL initialization schema creating platform schema, processed_telemetry, and anomaly tables (infrastructure/docker/postgres/init.sql).
+- Kafka broker health check and topic initialization helper scripts (infrastructure/docker/kafka/check-health.sh, init-topics.sh, wait-and-run.sh).
+- Prometheus scraping configuration targeting local microservices (infrastructure/docker/prometheus/prometheus.yml).
+- Grafana Prometheus datasource and dashboard provider configurations (infrastructure/docker/grafana/provisioning/).
+- Curated Grafana dashboards for ingestion service metrics and platform service health (observability/grafana/dashboards/ingestion-metrics.json, service-health.json, README.md).
+- Topic provisioning automation scripts for PowerShell and Bash (scripts/create-topics.ps1, scripts/create-topics.sh).
+- Core Architecture Decision Records covering Kafka, Spring Boot, PostgreSQL MVP, and Docker Compose (docs/decisions/0001-0004, README.md).

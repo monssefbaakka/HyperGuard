@@ -1,0 +1,215 @@
+name: pulsestream-local
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: pulsestream-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "${ZOOKEEPER_PORT:-2181}:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    healthcheck:
+      test: [ "CMD", "cub", "zk-ready", "localhost:2181", "30" ]
+      interval: 10s
+      timeout: 35s
+      retries: 10
+    networks:
+      - pulsestream-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: pulsestream-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "${KAFKA_EXTERNAL_PORT:-9092}:9092"
+      - "${KAFKA_INTERNAL_PORT:-29092}:29092"
+    environment:
+      KAFKA_BROKER_ID: ${KAFKA_BROKER_ID:-1}
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      # Listeners
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      # Replication / Reliability (Dev defaults)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      
+      # Broker Settings
+      KAFKA_MESSAGE_MAX_BYTES: ${KAFKA_MESSAGE_MAX_BYTES:-10485760}
+      KAFKA_REPLICA_FETCH_MAX_BYTES: ${KAFKA_REPLICA_FETCH_MAX_BYTES:-10485760}
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: ${KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS:-0}
+
+      # Topic retention
+      KAFKA_LOG_RETENTION_HOURS: ${KAFKA_LOG_RETENTION_HOURS:-168}
+      KAFKA_LOG_RETENTION_BYTES: ${KAFKA_LOG_RETENTION_BYTES:-1073741824}
+      KAFKA_LOG_SEGMENT_BYTES: ${KAFKA_LOG_SEGMENT_BYTES:-1073741824}
+      
+      # Partitions
+      KAFKA_NUM_PARTITIONS: ${KAFKA_NUM_PARTITIONS:-3}
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+      - ./kafka/wait-and-run.sh:/usr/bin/wait-and-run:ro
+      - ./kafka/check-health.sh:/usr/bin/check-health:ro
+    command: [ "bash", "/usr/bin/wait-and-run" ]
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "bash", "/usr/bin/check-health" ]
+      start_period: 30s
+      interval: 15s
+      timeout: 30s
+      retries: 10
+    networks:
+      - pulsestream-net
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: pulsestream-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./kafka/init-topics.sh:/init-topics.sh:ro
+    entrypoint: ["/bin/bash", "/init-topics.sh"]
+    environment:
+      KAFKA_BOOTSTRAP_SERVER: kafka:29092
+      KAFKA_REPLICATION_FACTOR: 1
+    networks:
+      - pulsestream-net
+
+  postgres:
+    image: postgres:16
+    container_name: pulsestream-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pulsestream}
+      POSTGRES_USER: ${POSTGRES_USER:-pulsestream}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pulsestream}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pulsestream} -d ${POSTGRES_DB:-pulsestream}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pulsestream-net
+
+  redis:
+    image: redis:7
+    container_name: pulsestream-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: [ "redis-server", "--appendonly", "yes" ]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pulsestream-net
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: pulsestream-prometheus
+    depends_on:
+      - kafka
+      - postgres
+      - redis
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - pulsestream-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    container_name: pulsestream-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"        # Jaeger UI
+      - "${JAEGER_OTLP_GRPC_PORT:-4317}:4317"   # OTLP gRPC receiver
+      - "${JAEGER_OTLP_HTTP_PORT:-4318}:4318"   # OTLP HTTP receiver
+    networks:
+      - pulsestream-net
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    container_name: pulsestream-grafana
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      # Version-controlled dashboard JSON lives under /observability (issue #110).
+      - ../../observability/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - pulsestream-net
+
+  # The web console. It is behind the `ui` profile so the plain `docker compose up -d` stays an
+  # infrastructure-only bring-up and does not pay for a Node build; start it with
+  # `docker compose --profile ui up -d web-ui`.
+  #
+  # The Spring services run on the host (like the Prometheus scrape targets), so nginx proxies
+  # /api and /ingest to host.docker.internal by default.
+  web-ui:
+    build:
+      context: ../../services/web-ui
+    container_name: pulsestream-web-ui
+    profiles:
+      - ui
+    environment:
+      PULSESTREAM_QUERY_HOST: ${PULSESTREAM_QUERY_HOST:-host.docker.internal}
+      PULSESTREAM_QUERY_PORT: ${PULSESTREAM_QUERY_PORT:-8083}
+      PULSESTREAM_INGESTION_HOST: ${PULSESTREAM_INGESTION_HOST:-host.docker.internal}
+      PULSESTREAM_INGESTION_PORT: ${PULSESTREAM_INGESTION_PORT:-8081}
+    ports:
+      - "${WEB_UI_PORT:-8090}:8090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - pulsestream-net
+
+volumes:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  pulsestream-net:
+    driver: bridge

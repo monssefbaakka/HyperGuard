@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  - job_name: ingestion-service
+    metrics_path: /actuator/prometheus
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["host.docker.internal:8081"]
+
+  - job_name: query-service
+    metrics_path: /actuator/prometheus
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["host.docker.internal:8083"]
+
+  # telemetry-processor is deliberately absent: its management port is bound to loopback (see that
+  # service's application.yml), so a container cannot reach it without overriding
+  # PULSESTREAM_MANAGEMENT_ADDRESS, and a permanently-down target is worse than no target.

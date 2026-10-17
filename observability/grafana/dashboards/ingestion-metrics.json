@@ -1,0 +1,513 @@
+{
+  "uid": "pulsestream-ingestion-metrics",
+  "title": "Ingestion Metrics",
+  "description": "The front door of the platform: what POST /api/v1/events accepted, what it rejected, and how long it took.",
+  "tags": ["pulsestream", "ingestion"],
+  "style": "light",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"] },
+  "links": [
+    {
+      "title": "PulseStream",
+      "type": "dashboards",
+      "tags": ["pulsestream"],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Right now",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "title": "Accepted",
+      "description": "Events accepted per second over the last 5m (2xx responses on the ingest endpoint).",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "#1F9254" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\", outcome=\"SUCCESS\"}[5m]))",
+          "legendFormat": "accepted/s"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Accept ratio",
+      "description": "Accepted / total on the ingest endpoint over 5m. Below 99% means callers are being turned away - check Rejected against Failed to see whose fault it is.",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "noValue": "-",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#C0392B", "value": null },
+              { "color": "#D9822B", "value": 0.95 },
+              { "color": "#1F9254", "value": 0.99 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\", outcome=\"SUCCESS\"}[5m])) / sum(rate(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\"}[5m]))",
+          "legendFormat": "accept ratio"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Rejected (4xx)",
+      "description": "Requests refused as invalid over the selected time range - payloads the caller has to fix. Counted, not rated, so the number matches what a caller would report.",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#5B6B7F", "value": null },
+              { "color": "#D9822B", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\", outcome=\"CLIENT_ERROR\"}[$__range]))",
+          "legendFormat": "rejected"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Failed (5xx)",
+      "description": "Requests the service could not complete over the selected range - a Kafka publish failure or an unhandled exception. Any non-zero value is a platform problem.",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#5B6B7F", "value": null },
+              { "color": "#C0392B", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\", outcome=\"SERVER_ERROR\"}[$__range]))",
+          "legendFormat": "failed"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Avg latency",
+      "description": "Mean time to accept an event over 5m, measured server-side (sum/count - there are no histogram buckets on this metric).",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "noValue": "-",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#1F9254", "value": null },
+              { "color": "#D9822B", "value": 0.1 },
+              { "color": "#C0392B", "value": 0.5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_sum{job=\"ingestion-service\", uri=\"/api/v1/events\"}[5m])) / sum(rate(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\"}[5m]))",
+          "legendFormat": "avg"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Peak latency",
+      "description": "Slowest single ingest in the current scrape window. This is the number a caller with a tight timeout actually hits.",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "noValue": "-",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#5B6B7F", "value": null },
+              { "color": "#D9822B", "value": 0.5 },
+              { "color": "#C0392B", "value": 2 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "max(http_server_requests_seconds_max{job=\"ingestion-service\", uri=\"/api/v1/events\"})",
+          "legendFormat": "peak"
+        }
+      ]
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Flow",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "title": "Ingest rate by outcome",
+      "description": "Everything arriving at the endpoint, stacked. The total bar height is offered load; the green part is what made it onto the Kafka topic.",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 75,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "barAlignment": 0,
+            "axisBorderShow": false,
+            "axisSoftMin": 0,
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "SUCCESS" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#1F9254" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "CLIENT_ERROR" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#D9822B" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "SERVER_ERROR" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#C0392B" } }]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\"}[$__rate_interval]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Latency: average vs peak",
+      "description": "Average against the slowest request per window. They separate when the tail degrades before the mean does - typically the Kafka producer blocking on a full buffer.",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisBorderShow": false,
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "peak" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#D9822B" } },
+              { "id": "custom.fillOpacity", "value": 0 },
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 6] } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "average" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#2A6FDB" } }]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_sum{job=\"ingestion-service\", uri=\"/api/v1/events\"}[$__rate_interval])) / sum(rate(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\"}[$__rate_interval]))",
+          "legendFormat": "average"
+        },
+        {
+          "expr": "max(http_server_requests_seconds_max{job=\"ingestion-service\", uri=\"/api/v1/events\"})",
+          "legendFormat": "peak"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Responses in range",
+      "description": "Every status code the endpoint returned over the selected time range, largest first.",
+      "type": "bargauge",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 14 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "noValue": "No requests in range",
+          "color": { "mode": "fixed", "fixedColor": "#2A6FDB" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "2.*" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#1F9254" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "4.*" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#D9822B" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "5.*" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#C0392B" } }]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "minVizWidth": 8,
+        "minVizHeight": 16,
+        "namePlacement": "left"
+      },
+      "targets": [
+        {
+          "expr": "sum by (status) (increase(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\"}[$__range]))",
+          "legendFormat": "{{status}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Why requests failed",
+      "description": "The exception behind each non-2xx response over the selected range. Empty is the healthy state; 'none' means the status was set without an exception being thrown (a validation rejection, for instance).",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 14 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "#C0392B", "value": null }]
+          },
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Count" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
+              { "id": "custom.align", "value": "right" }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" },
+        "sortBy": [{ "displayName": "Count", "desc": true }]
+      },
+      "targets": [
+        {
+          "expr": "topk(5, sum by (status, exception) (increase(http_server_requests_seconds_count{job=\"ingestion-service\", uri=\"/api/v1/events\", outcome=~\"CLIENT_ERROR|SERVER_ERROR\"}[$__range])))",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "renameByName": { "status": "Status", "exception": "Exception", "Value": "Count" },
+            "indexByName": {}
+          }
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Endpoint mix",
+      "description": "Ingest traffic against everything else the service serves (actuator probes included), so a load figure is never read as ingest when it is not.",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 14 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisBorderShow": false,
+            "axisSoftMin": 0,
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "/api/v1/events" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#2A6FDB" } }]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"ingestion-service\"}[$__rate_interval]))",
+          "legendFormat": "{{uri}}"
+        }
+      ]
+    }
+  ]
+}

@@ -47,3 +47,5 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Kafka topology, auth) and the session interceptor wired into the servlet pipeline.
 - Query service controllers (anomaly/telemetry query, auth, platform, metadata, topology,
   incident, quarantine), shared `SortDirections` constants and the Dockerfile.
+- Query service application smoke test, auth interceptor and controller tests, auth service
+  test, shared test profile and `.dockerignore`.

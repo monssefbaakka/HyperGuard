@@ -1,7 +1,17 @@
 # Progress Log
 
-Running log of day-to-day notes on the HyperGuard Sentinel project — what changed, what was investigated, what's next.
+Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-17
+
+- Added the local Docker Compose development infrastructure: Zookeeper, Kafka, PostgreSQL,
+  Redis, Prometheus, Grafana, and Jaeger with complete configuration and documentation.
+- Added database schema initialization (init.sql) for processed telemetry and anomaly persistence.
+- Added Prometheus scraping rules and Grafana datasource/dashboard provisioning.
+- Added Grafana dashboards for ingestion metrics and platform service health.
+- Added automated Kafka topic creation scripts (create-topics.ps1, create-topics.sh).
+- Documented foundational Architecture Decision Records (ADRs 0001-0004) covering message broker,
+  service framework, relational persistence, and local orchestration choices.
 ## 2026-10-16
 
 - Added the query service's application smoke test, auth interceptor and auth controller tests,

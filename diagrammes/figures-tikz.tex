@@ -1,0 +1,175 @@
+% =====================================================================
+%  Figures TikZ de synthese -- HyperGuard
+%  Diagrammes pedagogiques destines a la soutenance : ils resument le
+%  cycle decrit dans le corps du rapport sans introduire d'information
+%  qui n'y figure pas deja.
+% =====================================================================
+
+\definecolor{psgreen}{HTML}{1B7A45}
+\definecolor{pslight}{HTML}{E8F3EC}
+\definecolor{psgrey}{HTML}{455A64}
+\definecolor{pslightgrey}{HTML}{ECEFF1}
+\definecolor{psred}{HTML}{A83232}
+\definecolor{pslightred}{HTML}{FAEAEA}
+\definecolor{psamber}{HTML}{9C6B12}
+\definecolor{pslightamber}{HTML}{FAF1DF}
+
+\tikzset{
+  psbox/.style   = {rounded corners=2pt, draw=psgrey, line width=0.5pt,
+                    fill=pslightgrey, align=center, font=\footnotesize,
+                    minimum height=9mm, inner sep=3pt},
+  psok/.style    = {psbox, draw=psgreen, fill=pslight},
+  pserr/.style   = {psbox, draw=psred,   fill=pslightred},
+  pswarn/.style  = {psbox, draw=psamber, fill=pslightamber},
+  psdec/.style   = {diamond, aspect=2.2, draw=psgrey, line width=0.5pt,
+                    fill=white, align=center, font=\scriptsize, inner sep=1pt},
+  psarrow/.style = {-{Stealth[length=2.2mm,width=1.6mm]}, draw=psgrey, line width=0.6pt},
+  psdash/.style  = {psarrow, dashed},
+  pstag/.style   = {font=\scriptsize\itshape, text=psgrey, inner sep=2pt, fill=white},
+}
+\newcommand{\pscode}[1]{{\ttfamily\scriptsize #1}}
+
+% ---------------------------------------------------------------------
+% 1. Vue d'ensemble de la chaine -- placee dans l'introduction generale.
+% ---------------------------------------------------------------------
+\newcommand{\figChaine}{%
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=6mm]
+  \node[psbox,  text width=23mm]                  (a) {Capteur\\ou simulateur};
+  \node[psok,   text width=25mm, right=of a]      (b) {API d'ingestion\\validation, \pscode{202}};
+  \node[psbox,  text width=23mm, right=of b]      (c) {Apache Kafka\\découplage};
+  \node[psok,   text width=25mm, right=of c]      (d) {Traitement\\règles d'anomalie};
+  \node[psbox,  text width=23mm, right=of d]      (e) {PostgreSQL\\et console};
+  \draw[psarrow] (a) -- (b);
+  \draw[psarrow] (b) -- (c);
+  \draw[psarrow] (c) -- (d);
+  \draw[psarrow] (d) -- (e);
+\end{tikzpicture}
+\caption{Les cinq étapes de la chaîne HyperGuard, de l'émission d'une mesure à sa restitution}
+\label{fig:chaine}
+\end{figure}}
+
+% ---------------------------------------------------------------------
+% 2. Cycle de developpement -- chapitre 1, organisation du travail.
+% ---------------------------------------------------------------------
+\newcommand{\figCycleDev}{%
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=5mm]
+  \node[psbox,  text width=24mm]              (s1) {Branche\\par sujet};
+  \node[psbox,  text width=24mm, right=of s1] (s2) {Développement\\du composant};
+  \node[psok,   text width=24mm, right=of s2] (s3) {Tests\\automatisés};
+  \node[pswarn, text width=24mm, right=of s3] (s4) {Revue\\de code};
+  \node[psok,   text width=24mm, right=of s4] (s5) {Intégration\\dans \pscode{main}};
+  \draw[psarrow] (s1) -- (s2);
+  \draw[psarrow] (s2) -- (s3);
+  \draw[psarrow] (s3) -- (s4);
+  \draw[psarrow] (s4) -- (s5);
+  \draw[psarrow] (s5.south) -- ++(0,-7mm) -| node[pstag, pos=0.25, below] {sujet suivant} (s1.south);
+\end{tikzpicture}
+\caption{Cycle de travail suivi pour chaque sujet : développement, validation par tests, revue puis intégration}
+\label{fig:cycledev}
+\end{figure}}
+
+% ---------------------------------------------------------------------
+% 3. Cycle de vie complet d'un evenement -- chapitre 3, conception.
+%    C'est le schema de reference pour la soutenance.
+% ---------------------------------------------------------------------
+\newcommand{\figCycleEvenement}{%
+\begin{figure}[p]
+\centering
+\begin{tikzpicture}[node distance=8mm]
+  \node[psbox,  text width=44mm]                        (emit)  {Émission d'une mesure\\(capteur ou simulateur)};
+  \node[psbox,  text width=44mm, below=of emit]         (post)  {\pscode{POST /api/v1/events}};
+  \node[psdec,  text width=17mm, below=of post]         (valid) {Enveloppe\\valide ?};
+  \node[pserr,  text width=32mm, left=10mm of valid]    (rej)   {\pscode{400} -- requête rejetée,\\aucune publication};
+  \node[psok,   text width=44mm, below=of valid]        (raw)   {Publication dans\\\pscode{telemetry.events.raw}};
+  \node[psok,   text width=32mm, left=10mm of raw]      (acc)   {\pscode{202 Accepted}\\rendu au client};
+  \node[psbox,  text width=44mm, below=of raw]          (cons)  {Consommation par le processeur\\(groupe de consommateurs)};
+  \node[psbox,  text width=44mm, below=of cons]         (norm)  {Normalisation puis\\règles déterministes};
+
+  \node[pswarn, text width=40mm, below=14mm of norm]                (ano) {Seuil franchi\\\pscode{telemetry.events.anomalies}};
+  \node[psok,   text width=40mm, left=4mm of ano]                   (ok)  {Mesure normale\\PostgreSQL + \pscode{.processed}};
+  \node[pserr,  text width=40mm, right=4mm of ano]                  (dlq) {Erreur de traitement\\\pscode{telemetry.events.dlq}};
+  \node[psbox,  text width=40mm, below=10mm of dlq]                 (rep) {Rejeu sélectif et borné\\déclenché par l'opérateur,\\idempotence par \pscode{event\_id}};
+
+  \draw[psarrow] (emit)  -- (post);
+  \draw[psarrow] (post)  -- (valid);
+  \draw[psarrow] (valid) -- node[pstag, above] {non} (rej);
+  \draw[psarrow] (valid) -- node[pstag, right] {oui} (raw);
+  \draw[psarrow] (raw)   -- (acc);
+  \draw[psarrow] (raw)   -- (cons);
+  \draw[psarrow] (cons)  -- (norm);
+  \draw[psarrow] (norm.south) -- ++(0,-4mm) -| (ok.north);
+  \draw[psarrow] (norm.south) -- ++(0,-4mm) -| (ano.north);
+  \draw[psarrow] (norm.south) -- ++(0,-4mm) -| (dlq.north);
+  \draw[psarrow] (dlq) -- (rep);
+  \draw[psarrow] (rep.east) -- ++(6mm,0) |- (raw.east);
+\end{tikzpicture}
+\caption{Cycle de vie complet d'un événement : acceptation bornée, découplage Kafka et trois issues possibles du traitement}
+\label{fig:cycle-evenement}
+\end{figure}}
+
+% ---------------------------------------------------------------------
+% 4. Boucle DLQ / rejeu -- chapitre 3, gestion des erreurs.
+% ---------------------------------------------------------------------
+\newcommand{\figCycleDLQ}{%
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+  \def\psR{38mm}
+  \node[pserr,  text width=38mm] (d1) at ( 90:\psR) {Échec de traitement\\ou de désérialisation};
+  \node[psbox,  text width=38mm] (d2) at ( 18:\psR) {Publication dans \pscode{.dlq}\\avec le contexte d'erreur};
+  \node[psbox,  text width=38mm] (d3) at (306:\psR) {Investigation depuis\\la console opérateur};
+  \node[pswarn, text width=38mm] (d4) at (234:\psR) {Sélection explicite des\\identifiants à rejouer};
+  \node[psok,   text width=38mm] (d5) at (162:\psR) {Rejeu borné vers \pscode{.raw}\\avec en-têtes de rejeu};
+  \draw[psarrow] (d1) -- (d2);
+  \draw[psarrow] (d2) -- (d3);
+  \draw[psarrow] (d3) -- (d4);
+  \draw[psarrow] (d4) -- (d5);
+  \draw[psarrow] (d5) -- (d1);
+\end{tikzpicture}
+\caption{Boucle de traitement d'un incident : la reprise est déclenchée par l'opérateur, jamais automatiquement}
+\label{fig:cycle-dlq}
+\end{figure}}
+
+% ---------------------------------------------------------------------
+% 5. Topologie de deploiement Kubernetes -- chapitre 5.
+% ---------------------------------------------------------------------
+\newcommand{\figDeploiement}{%
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+  % Flux applicatif, de gauche a droite.
+  \node[psok,  text width=24mm]                     (ing)  {Service\\d'ingestion};
+  \node[psbox, text width=24mm, right=6mm of ing]   (kfk)  {Kafka\\(Strimzi)};
+  \node[psok,  text width=24mm, right=6mm of kfk]   (proc) {Processeur\\télémétrie};
+  \node[psbox, text width=24mm, right=6mm of proc]  (pg)   {PostgreSQL};
+  \node[psok,  text width=24mm, right=6mm of pg]    (qry)  {Service\\de requêtes};
+  \draw[psarrow] (ing) -- (kfk);
+  \draw[psarrow] (kfk) -- (proc);
+  \draw[psarrow] (proc) -- (pg);
+  \draw[psarrow] (pg) -- (qry);
+
+  % Ce que Kubernetes ajoute autour du flux.
+  \node[pswarn, text width=54mm, above=13mm of kfk, xshift=15mm] (hpa) {HPA -- réplicas ajustés sous charge};
+  \node[psbox,  text width=42mm, below=13mm of kfk, xshift=-3mm] (cfg) {ConfigMaps et Secrets};
+  \node[psbox,  text width=48mm, below=13mm of pg,  xshift=3mm]  (obs) {Prometheus, Grafana, Jaeger};
+  \draw[psdash] (hpa) -- (ing);
+  \draw[psdash] (hpa) -- (proc);
+  \draw[psdash] (cfg) -- (ing);
+  \draw[psdash] (cfg) -- (proc);
+  \draw[psdash] (proc) -- (obs);
+  \draw[psdash] (qry) -- (obs);
+
+  \begin{scope}[on background layer]
+    \node[draw=psgreen, line width=0.6pt, dashed, rounded corners=3pt, inner sep=2mm,
+          fit=(hpa)(ing)(proc)(qry)(kfk)(pg)(obs)(cfg)] (nsbox) {};
+  \end{scope}
+  \node[font=\scriptsize\bfseries, text=psgreen, anchor=north west, fill=white, inner sep=1pt]
+        at ([shift={(2mm,-1mm)}]nsbox.north west) {namespace Kubernetes};
+\end{tikzpicture}
+\caption{Topologie de déploiement : workloads applicatifs, dépendances gérées et autoscaling horizontal}
+\label{fig:deploiement}
+\end{figure}}

@@ -1,0 +1,151 @@
+% =====================================================================
+%  Figures UML TikZ -- HyperGuard
+%  Cas d'utilisation et diagrammes de classes. Meme charte que
+%  figures-tikz.tex, dont les couleurs et styles sont reutilises ici.
+% =====================================================================
+
+\usetikzlibrary{shapes.multipart}
+
+\tikzset{
+  psuc/.style    = {ellipse, draw=psgrey, line width=0.5pt, fill=pslightgrey,
+                    font=\scriptsize, align=center, inner sep=2pt,
+                    minimum height=8mm, text width=27mm},
+  psucok/.style  = {psuc, draw=psgreen, fill=pslight},
+  psucerr/.style = {psuc, draw=psred,   fill=pslightred},
+  psclass/.style = {rectangle split, rectangle split parts=2,
+                    rectangle split part align=left, draw=psgrey,
+                    line width=0.5pt, fill=white, font=\scriptsize,
+                    text width=32mm, align=left, inner sep=3pt},
+  psclassok/.style  = {psclass, draw=psgreen},
+  psclasserr/.style = {psclass, draw=psred},
+  psclasswarn/.style= {psclass, draw=psamber},
+  psactorlbl/.style = {font=\scriptsize, align=center, text width=26mm},
+}
+
+\tikzset{psactor/.pic={
+  \draw[psgrey, line width=0.5pt] (0,0) circle (2.2mm);
+  \draw[psgrey, line width=0.5pt] (0,-2.2mm) -- (0,-9mm);
+  \draw[psgrey, line width=0.5pt] (-4mm,-4.8mm) -- (4mm,-4.8mm);
+  \draw[psgrey, line width=0.5pt] (0,-9mm) -- (-3.5mm,-15mm);
+  \draw[psgrey, line width=0.5pt] (0,-9mm) -- (3.5mm,-15mm);
+  \node[psactorlbl, below=1mm] at (0,-15mm) {#1};
+}}
+
+% ---------------------------------------------------------------------
+% Diagramme de cas d'utilisation.
+% Deux acteurs : l'equipement qui emet, l'operateur qui exploite.
+% La colonne de gauche s'enchaine sans intervention humaine.
+% ---------------------------------------------------------------------
+\newcommand{\figCasUtilisation}{%
+\begin{figure}[htbp]
+\centering
+\scalebox{0.90}{%
+\begin{tikzpicture}
+  \draw[draw=psgrey, line width=0.6pt, rounded corners=2pt] (2.4,0.95) rectangle (12.4,-7.6);
+  \node[font=\scriptsize\bfseries, text=psgrey] at (7.4,0.6) {Plateforme HyperGuard};
+
+  \pic at (0.8,0) {psactor={Équipement IoT\\ou simulateur}};
+  \pic at (14.1,-2.2) {psactor={Opérateur\\d'exploitation}};
+
+  \node[psucok]  (uc1) at (4.7,-0.2) {Émettre une mesure};
+  \node[psucok]  (uc2) at (4.7,-1.7) {Valider et accepter\\l'événement};
+  \node[psucok]  (uc3) at (4.7,-3.2) {Traiter et normaliser};
+  \node[psucok]  (uc4) at (4.7,-4.7) {Détecter une anomalie};
+  \node[psucok]  (uc5) at (4.7,-6.4) {Persister la mesure};
+
+  \node[psucerr] (uc6)  at (10.0,-0.5) {Isoler l'événement\\dans la DLQ};
+  \node[psuc]    (uc7)  at (10.0,-2.2) {Consulter mesures\\et anomalies};
+  \node[psuc]    (uc8)  at (10.0,-3.9) {Rejouer un événement\\de la DLQ};
+  \node[psuc]    (uc9)  at (10.0,-5.4) {Superviser métriques\\et traces};
+  \node[psuc]    (uc10) at (10.0,-6.9) {Simuler une flotte};
+
+  \draw[psgrey, line width=0.5pt] (1.4,-0.4) -- (uc1);
+  \draw[psgrey, line width=0.5pt] (13.5,-2.6) -- (uc7);
+  \draw[psgrey, line width=0.5pt] (13.5,-2.6) to[out=205,in=0] (uc8);
+  \draw[psgrey, line width=0.5pt] (13.5,-2.6) to[out=215,in=0] (uc9);
+  \draw[psgrey, line width=0.5pt] (13.5,-2.6) to[out=220,in=0] (uc10);
+
+  \draw[psdash] (uc1) -- node[pstag, right, pos=0.45] {\pscode{<<include>>}} (uc2);
+  \draw[psdash] (uc2) -- node[pstag, right, pos=0.45] {\pscode{<<include>>}} (uc3);
+  \draw[psdash] (uc3) -- node[pstag, right, pos=0.45] {\pscode{<<include>>}} (uc4);
+  \draw[psdash] (uc4) -- node[pstag, right, pos=0.45] {\pscode{<<include>>}} (uc5);
+  \draw[psdash] (uc3) to[out=25,in=180] node[pstag, pos=0.6, above] {\pscode{<<extend>>}} (uc6);
+  \draw[psdash] (uc8) to[out=180,in=-15] node[pstag, pos=0.5, below] {\pscode{<<include>>}} (uc3);
+\end{tikzpicture}}
+\caption{Diagramme de cas d'utilisation : la colonne de gauche s'enchaîne automatiquement, l'opérateur n'intervient que sur la consultation, le rejeu, la supervision et la simulation}
+\label{fig:cas-utilisation}
+\end{figure}}
+
+% ---------------------------------------------------------------------
+% Diagramme de classes -- modele d'echange et forme persistee.
+% ---------------------------------------------------------------------
+\newcommand{\figClassesModele}{%
+\begin{figure}[htbp]
+\centering
+\scalebox{0.86}{%
+\begin{tikzpicture}[node distance=12mm]
+  \node[psclass] (evt) {\textbf{TelemetryEvent}\nodepart{two}
+    \pscode{String eventId}\\ \pscode{String tenantId}\\ \pscode{String eventType}\\
+    \pscode{Instant timestamp}\\ \pscode{String source}\\ \pscode{String version}\\
+    \pscode{TelemetryPayload payload}};
+  \node[psclass, right=of evt] (pl) {\textbf{TelemetryPayload}\nodepart{two}
+    \pscode{String deviceId}\\ \pscode{String deviceType}\\ \pscode{String metric}\\
+    \pscode{BigDecimal value}\\ \pscode{String unit}\\ \pscode{String location}};
+  \node[psclasserr, right=of pl] (dl) {\textbf{DeadLetterEvent}\nodepart{two}
+    \pscode{TelemetryEvent event}\\ \pscode{String errorMessage}\\
+    \pscode{String sourceService}\\ \pscode{Instant failedAt}};
+  \node[psclassok, below=14mm of pl] (ent) {\textbf{Processed\-Telemetry\-Entity}\nodepart{two}
+    \pscode{Long id}\\ \pscode{String eventId} (unique)\\ \pscode{String tenantId}\\
+    \pscode{String eventType}\\ \pscode{Instant timestamp}\\ \pscode{String source}\\
+    \pscode{String deviceId}\\ \pscode{String deviceType}\\ \pscode{String metric}\\
+    \pscode{BigDecimal value}\\ \pscode{String unit}\\ \pscode{String location}\\
+    \pscode{Instant ingestedAt}};
+  \draw[psarrow] (evt) -- node[pstag, above] {1} (pl);
+  \draw[psarrow] (dl.south) to[out=-90,in=0] node[pstag, pos=0.4, right] {encapsule} (ent.east);
+  \draw[psdash]  (evt.south) to[out=-90,in=180] node[pstag, pos=0.5, below] {normalisation} (ent.west);
+\end{tikzpicture}}
+\caption{Modèle d'échange : l'enveloppe \texttt{TelemetryEvent} circule entre les services, \texttt{ProcessedTelemetryEntity} en est la forme persistée, enrichie de l'horodatage d'ingestion}
+\label{fig:classes-modele}
+\end{figure}}
+
+% ---------------------------------------------------------------------
+% Diagramme de classes -- composants applicatifs.
+% ---------------------------------------------------------------------
+\newcommand{\figClassesComposants}{%
+\begin{figure}[htbp]
+\centering
+\scalebox{0.9}{%
+\begin{tikzpicture}[node distance=9mm, psclass/.append style={text width=34mm}]
+  \node[psclassok] (ctrl) {\textbf{TelemetryController}\nodepart{two}
+    \pscode{+ ingest(request)}\\ \pscode{\ \ : ResponseEntity}};
+  \node[psclass, right=of ctrl] (prod) {\textbf{Kafka\-Producer\-Service}\nodepart{two}
+    \pscode{+ publish(event)}\\ \pscode{- confirmation bornée}};
+  \node[psclass, right=of prod] (cons) {\textbf{Telemetry\-Event\-Consumer}\nodepart{two}
+    \pscode{+ onMessage(record)}};
+
+  \node[psclass, below=12mm of ctrl] (norm) {\textbf{Telemetry\-Normalization}\nodepart{two}
+    \pscode{+ normalize(event)}};
+  \node[psclassok, right=of norm] (det) {\textbf{AnomalyDetection}\nodepart{two}
+    \pscode{+ detect(event)}\\ \pscode{\ \ : boolean}};
+  \node[psclass, right=of det] (pers) {\textbf{PersistenceService}\nodepart{two}
+    \pscode{+ persist(event)}};
+
+  \node[psclasserr, below=12mm of norm] (dlqp) {\textbf{DeadLetterPublisher}\nodepart{two}
+    \pscode{+ publish(event, cause)}};
+  \node[psclasswarn, right=of dlqp] (replay) {\textbf{DlqReplayService}\nodepart{two}
+    \pscode{+ replay(ids)}\\ \pscode{- bornes, en-têtes}};
+  \node[psclass, right=of replay] (repo) {\textbf{Processed\-Telemetry\-Repo}\nodepart{two}
+    \pscode{+ save(entity)}\\ \pscode{+ findByEventId(id)}};
+
+  \draw[psarrow] (ctrl) -- (prod);
+  \draw[psarrow] (prod) -- (cons);
+  \draw[psarrow] (cons.south) -- (pers.north);
+  \draw[psarrow] (norm) -- (det);
+  \draw[psarrow] (det) -- (pers);
+  \draw[psarrow] (pers.south) -- (repo.north);
+  \draw[psarrow] (det.south) -- (dlqp.north east);
+  \draw[psarrow] (dlqp) -- (replay);
+\end{tikzpicture}}
+\caption{Composants applicatifs et répartition des responsabilités : réception, publication, consommation, normalisation, détection, persistance et traitement des erreurs}
+\label{fig:classes-composants}
+\end{figure}}

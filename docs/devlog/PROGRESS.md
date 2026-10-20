@@ -2,6 +2,16 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-20
+
+- Added a layered container image build for the telemetry processor (`Dockerfile`,
+  `.dockerignore`): Maven build stage, Spring Boot layer extraction, non-root JRE runtime.
+- Brought in the architecture docs: system overview, service catalog, C4 model, event schema,
+  Kafka topics, event replay strategy, cache strategy and container build/validation standards.
+- Added the architecture diagrams (system, event flow, Kafka topology, Kubernetes deployment).
+- Added ADR 0005 on running Kafka on Kubernetes with Strimzi.
+- Added the platform overview and `PROJECT_STATE.md` snapshot.
+
 ## 2026-10-17
 
 - Added the local Docker Compose development infrastructure: Zookeeper, Kafka, PostgreSQL,

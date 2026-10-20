@@ -57,3 +57,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Curated Grafana dashboards for ingestion service metrics and platform service health (observability/grafana/dashboards/ingestion-metrics.json, service-health.json, README.md).
 - Topic provisioning automation scripts for PowerShell and Bash (scripts/create-topics.ps1, scripts/create-topics.sh).
 - Core Architecture Decision Records covering Kafka, Spring Boot, PostgreSQL MVP, and Docker Compose (docs/decisions/0001-0004, README.md).
+- Layered container image build for the telemetry processor (services/telemetry-processor/Dockerfile, .dockerignore).
+- Architecture documentation: system overview, services, C4 model, event schema, topics, replay strategy, cache strategy, container build and image validation standards (docs/architecture/).
+- Architecture diagrams for system, event flow, Kafka topology and Kubernetes deployment (docs/diagrams/).
+- ADR 0005 on running Kafka on Kubernetes with Strimzi (docs/decisions/0005-kafka-on-kubernetes-with-strimzi.md).
+- Platform overview and project state snapshot (docs/platform-overview.md, PROJECT_STATE.md).

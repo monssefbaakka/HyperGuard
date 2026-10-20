@@ -1,0 +1,222 @@
+# Event Schema Specification
+
+## Overview
+
+PulseStream is an event-driven platform. All services communicate through events transported by Kafka. To ensure consistency and interoperability between services, all events follow a standardized envelope structure.
+
+This document defines the canonical event schema used across the platform.
+
+---
+
+## Event Envelope
+
+Every event published to the streaming platform must follow the canonical event envelope.
+
+```json
+{
+  "eventId": "evt_001",
+  "tenantId": "site_nador_01",
+  "eventType": "telemetry.reading",
+  "timestamp": "2026-03-15T12:00:00Z",
+  "source": "device-gateway",
+  "version": "1.0",
+  "payload": {}
+}
+```
+The envelope separates system metadata from business data.
+
+### Envelope Fields
+
+| Field     | Description                       |
+|-----------|-----------------------------------|
+| eventId   | Unique identifier for the event   |
+| tenantId  | Logical tenant or site identifier |
+| eventType | Type of event being emitted       |
+| timestamp | Time when the event occurred      |
+| source    | Originating system or service     |
+| version   | Event schema version              |
+| payload   | Domain-specific event data        |
+
+### Event Types
+
+The platform supports several event categories.
+
+#### Telemetry Events
+
+Produced when devices send telemetry readings.
+
+*   `telemetry.reading`
+
+#### Processed Telemetry Events
+
+Produced after the telemetry-processor normalizes or enriches telemetry data.
+
+*   `telemetry.processed`
+
+#### Anomaly Events
+
+Generated when telemetry readings violate anomaly rules.
+
+*   `telemetry.anomaly`
+
+#### Dead Letter Events
+
+Generated when event processing fails.
+
+*   `telemetry.deadletter`
+
+### Telemetry Event Example
+
+This event represents a telemetry reading sent by a device.
+
+```json
+{
+"eventId": "evt_102",
+"tenantId": "factory_01",
+"eventType": "telemetry.reading",
+"timestamp": "2026-03-15T12:05:21Z",
+"source": "sensor_gateway",
+"version": "1.0",
+"payload": {
+"deviceId": "sensor_1042",
+"deviceType": "temperature-sensor",
+"metric": "temperature",
+"value": 28.4,
+"unit": "C",
+"location": "zone-a"
+}
+}
+```
+
+### Telemetry Payload Fields
+
+| Field      | Description                   |
+|------------|-------------------------------|
+| deviceId   | Unique device identifier      |
+| deviceType | Type of sensor                |
+| metric     | Type of measurement           |
+| value      | Sensor reading                |
+| unit       | Measurement unit              |
+| location   | Logical device location       |
+
+### Anomaly Event Example
+
+When the telemetry-processor detects abnormal behavior, it emits an anomaly event. The event reuses
+the standard envelope and telemetry payload, and adds detection metadata (`severity`, `reasons`,
+`detectedAt`) at the envelope level so downstream consumers can act on it without re-running
+detection.
+
+```json
+{
+"eventId": "evt_203",
+"tenantId": "factory_01",
+"eventType": "telemetry.anomaly",
+"timestamp": "2026-03-15T12:05:21Z",
+"source": "telemetry-processor",
+"version": "1.0",
+"payload": {
+"deviceId": "sensor_1042",
+"deviceType": "temperature-sensor",
+"metric": "temperature",
+"value": 95.0,
+"unit": "C",
+"location": "zone-a"
+},
+"severity": "WARNING",
+"reasons": ["temperature is above maximum threshold"],
+"detectedAt": "2026-03-15T12:05:23Z"
+}
+```
+
+### Anomaly Event Fields
+
+| Field        | Description                                                                 |
+|--------------|-----------------------------------------------------------------------------|
+| eventType    | Always `telemetry.anomaly`                                                   |
+| source       | Always `telemetry-processor`                                                |
+| timestamp    | Original reading timestamp, carried over from the raw event                 |
+| payload      | Standard telemetry payload (see fields above)                               |
+| severity     | Detection severity: `WARNING` or `CRITICAL`                                 |
+| reasons      | List of human-readable explanations for why the reading was flagged         |
+| detectedAt   | Timestamp at which the processor detected the anomaly                       |
+
+### Anomaly Types
+
+The platform initially supports the following anomaly types.
+
+#### Threshold Breach
+
+Triggered when a sensor reading exceeds predefined limits.
+
+Implemented rules:
+
+*   `temperature > 80`
+*   `temperature < -40`
+*   missing `tenantId`, `deviceId`, `metric`, or `value`
+
+#### Sudden Deviation
+
+Triggered when the value changes significantly in a short time interval.
+
+Implemented rule:
+
+*   value change greater than 50% from the previous reading for the same normalized device/metric key
+
+#### Missing Heartbeat
+
+Planned for a future reliability phase. It is documented as an intended anomaly type but is not implemented in the current telemetry processor.
+
+### Kafka Topic Mapping
+
+Events are routed through Kafka topics.
+
+| Topic                        | Purpose                     |
+|-----------------------------|-----------------------------|
+| `telemetry.events.raw`      | Raw telemetry events        |
+| `telemetry.events.processed`| Normalized telemetry events |
+| `telemetry.events.anomalies`| Detected anomalies          |
+| `telemetry.events.dlq`      | Failed events               |
+
+### Event Versioning
+
+Event schemas may evolve over time. To support backward compatibility, each event includes a version field.
+
+Guidelines:
+
+*   Schema changes must be backward compatible whenever possible
+*   New fields should be optional
+*   Existing fields should not change semantics
+*   Consumers should tolerate unknown fields
+
+### Schema Evolution Strategy
+
+Future improvements may include:
+
+*   JSON Schema validation
+*   Schema Registry integration
+*   Avro or Protobuf event serialization
+
+For the MVP, events will use JSON encoding.
+
+### Event Validation
+
+Events received by the ingestion service must pass basic validation checks:
+
+*   required envelope fields present
+*   valid timestamp format
+*   payload structure matches event type
+
+Metric-specific bounds are handled by the telemetry processor anomaly detection rules rather than by the ingestion API.
+
+Invalid HTTP ingestion requests are rejected by the ingestion service validation layer. Events that fail asynchronous processing are routed to the dead-letter topic (`telemetry.events.dlq`) as `telemetry.deadletter` events, which the telemetry processor can replay back into the pipeline via a management endpoint.
+
+## Summary
+
+This schema specification defines the contract between all PulseStream services.
+
+By enforcing a consistent event structure, the platform ensures:
+
+*   interoperability between services
+*   reliable event processing
+*   safe schema evolution
+*   simplified debugging and monitoring

@@ -1,0 +1,105 @@
+# ========================================
+# Cloud Native Event Platform - .gitignore
+# Stack: Spring Boot, Kafka, Docker, K8s
+# ========================================
+
+#################################
+# Java / Maven / Gradle
+#################################
+
+# compiled classes
+*.class
+
+# build directories
+target/
+build/
+
+# packaged artifacts
+*.jar
+*.war
+*.ear
+*.nar
+
+#################################
+# Logs
+#################################
+
+*.log
+logs/
+hs_err_pid*
+replay_pid*
+
+#################################
+# IDEs
+#################################
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+out/
+
+# VSCode
+.vscode/
+
+#################################
+# OS Files
+#################################
+
+.DS_Store
+Thumbs.db
+
+#################################
+# Environment / Secrets
+#################################
+
+.env
+*.env
+infrastructure/docker/.env
+
+#################################
+# Docker
+#################################
+
+docker-compose.override.yml
+
+#################################
+# Temporary files
+#################################
+
+*.tmp
+*.swp
+*.swo
+
+#################################
+# Archives
+#################################
+
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+#################################
+# Node (in case dashboards or UI appear later)
+#################################
+
+node_modules/
+
+#################################
+# Kubernetes
+#################################
+
+*.kubeconfig
+
+#################################
+# Testing
+#################################
+
+coverage/
+#################################
+# Kubernetes rendered secrets
+#################################
+
+# Never commit real rendered Secrets; only *.example.yaml templates are tracked.
+infrastructure/kubernetes/**/secret.yaml

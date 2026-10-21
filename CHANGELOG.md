@@ -62,3 +62,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Architecture diagrams for system, event flow, Kafka topology and Kubernetes deployment (docs/diagrams/).
 - ADR 0005 on running Kafka on Kubernetes with Strimzi (docs/decisions/0005-kafka-on-kubernetes-with-strimzi.md).
 - Platform overview and project state snapshot (docs/platform-overview.md, PROJECT_STATE.md).
+- Root `.gitignore` covering build output, IDE files, local env files and rendered Kubernetes secrets.
+- Strimzi Kafka node pool, cluster and topic manifests (infrastructure/kubernetes/kafka/).
+- Ingestion service Kubernetes manifests: config map, deployment, ClusterIP/NodePort services and HPA (infrastructure/kubernetes/ingestion-service/).
+- Telemetry processor Kubernetes manifests: config map, secret template, deployment, service and HPA (infrastructure/kubernetes/telemetry-processor/).

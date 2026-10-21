@@ -2,6 +2,18 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-21
+
+- Added the root `.gitignore`, including the rule that keeps rendered
+  `infrastructure/kubernetes/**/secret.yaml` files out of git (only `*.example.yaml` is tracked).
+- Brought in the Kubernetes manifests for the streaming pipeline: Strimzi Kafka node pool,
+  cluster and topics; ingestion service config map, deployment, ClusterIP/NodePort services and
+  HPA; telemetry processor config map, secret template, deployment, service and HPA, with the
+  READMEs and HPA verification notes for each.
+- All 13 manifests parse as valid YAML with `apiVersion`/`kind` set. Not applied to a cluster
+  yet (no local cluster running); query-service, monitoring, observability, network policies
+  and autoscaling manifests are next.
+
 ## 2026-10-20
 
 - Added a layered container image build for the telemetry processor (`Dockerfile`,

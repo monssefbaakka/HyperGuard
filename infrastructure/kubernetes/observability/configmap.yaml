@@ -1,0 +1,118 @@
+# OpenTelemetry Collector pipeline configuration (#157).
+#
+# The collector is the single fan-in point for traces: the services export OTLP
+# to one in-cluster address instead of each holding an exporter configuration
+# per backend. Changing where traces end up is then an edit to the `exporters`
+# block here, not a redeploy of every service.
+#
+# TWO EXPORTERS, AND BOTH EARN THEIR PLACE (#158). `otlp/jaeger` forwards every
+# batch to the tracing backend, which is where traces are actually inspected.
+# `debug` stays alongside it because it is the only signal that survives the
+# backend being down: a batch that reaches the collector is logged whether or
+# not Jaeger accepts it, which is what separates "the service never exported"
+# from "the backend rejected it" during an incident. At `verbosity: basic` it
+# is one line per batch.
+#
+# EVERY ENDPOINT IS BOUND EXPLICITLY TO 0.0.0.0. Since collector v0.110 the
+# default host for a component endpoint is `localhost`, so a receiver that omits
+# it accepts nothing from outside the pod and the exporting service sees
+# connection refused rather than a configuration error.
+#
+# This ConfigMap is mounted read-only. The collector does not watch it: an edit
+# is applied with `kubectl rollout restart deployment/otel-collector -n
+# observability`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/component: tracing
+    app.kubernetes.io/part-of: pulsestream
+data:
+  collector.yaml: |
+    receivers:
+      # Both OTLP transports are accepted. The platform services use
+      # http/protobuf on 4318 (services/*/src/main/resources/application.yml),
+      # but gRPC on 4317 is the OTLP default for most SDKs and agents, so
+      # leaving it open avoids a collector change the first time something is
+      # instrumented with defaults.
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      # FIRST IN THE PIPELINE, and it has to be: memory_limiter rejects incoming
+      # data while the process is above its soft limit, which only protects
+      # anything if it runs before the data is batched and held. The percentages
+      # are read against the container memory limit in deployment.yaml (512Mi),
+      # so the two must be changed together - raising the limit without raising
+      # the request makes the collector OOM-kill under a burst instead of
+      # shedding it.
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 80
+        spike_limit_percentage: 20
+      # Batching is what keeps one export per span from reaching the backend.
+      # 5s is the ceiling on how long a span waits before it is exported, which
+      # is also the delay to expect when verifying with the debug exporter.
+      batch:
+        timeout: 5s
+        send_batch_size: 512
+
+    exporters:
+      # The tracing backend (#158). gRPC, so the endpoint carries no scheme -
+      # an `http://` prefix here is a startup error, not a fallback.
+      #
+      # `insecure: true` disables TLS on this hop. It is pod-to-pod traffic
+      # inside the cluster to a backend that serves no certificate; the
+      # alternative is issuing one for a service with no authentication in front
+      # of it either. Revisit together, not separately.
+      #
+      # If Jaeger is unavailable the exporter retries with backoff and then
+      # drops the batch. That is the intended failure: the collector must not
+      # block its receivers on a diagnostic backend, and the platform's own
+      # event pipeline never touches this path.
+      otlp/jaeger:
+        endpoint: jaeger.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+      # `basic` logs one line per exported batch (span count), not the spans
+      # themselves. `detailed` prints every span and attribute and is a way to
+      # fill a node's log disk on a busy pipeline; switch to it only while
+      # debugging, and only briefly.
+      debug:
+        verbosity: basic
+
+    extensions:
+      # Serves the readiness/liveness endpoint the Deployment probes. Without
+      # this extension the collector exposes no health surface at all and the
+      # probes would have to guess from the OTLP ports, which answer before the
+      # pipeline is built.
+      health_check:
+        endpoint: 0.0.0.0:13133
+
+    service:
+      extensions:
+        - health_check
+      pipelines:
+        # Traces only. The services export metrics through the Prometheus
+        # actuator endpoint and set `otel.metrics.exporter: none` and
+        # `otel.logs.exporter: none`, so a metrics or logs pipeline here would
+        # receive nothing.
+        traces:
+          receivers:
+            - otlp
+          processors:
+            - memory_limiter
+            - batch
+          exporters:
+            - otlp/jaeger
+            - debug
+      telemetry:
+        logs:
+          level: info

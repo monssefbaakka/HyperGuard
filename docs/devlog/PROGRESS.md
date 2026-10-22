@@ -2,6 +2,18 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-22
+
+- Brought in the query service Kubernetes manifests (config map, deployment, service).
+- Added network policies for the ingestion service, telemetry processor and query service; the
+  query service policy admits only the in-cluster Prometheus server pods from `monitoring`.
+- Added the tracing stack: observability namespace, OpenTelemetry collector (config map,
+  deployment, service, service account) and Jaeger backend, plus the pipeline README.
+- Added the monitoring namespace, Prometheus Helm values and install notes, and the service
+  discovery / DNS conventions doc.
+- All 16 manifests parse as valid YAML (15 Kubernetes objects plus the Helm values file). Not
+  applied to a cluster (no local cluster running). Grafana and autoscaling manifests are next.
+
 ## 2026-10-21
 
 - Added the root `.gitignore`, including the rule that keeps rendered

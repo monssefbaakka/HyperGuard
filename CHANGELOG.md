@@ -66,3 +66,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Strimzi Kafka node pool, cluster and topic manifests (infrastructure/kubernetes/kafka/).
 - Ingestion service Kubernetes manifests: config map, deployment, ClusterIP/NodePort services and HPA (infrastructure/kubernetes/ingestion-service/).
 - Telemetry processor Kubernetes manifests: config map, secret template, deployment, service and HPA (infrastructure/kubernetes/telemetry-processor/).
+- Query service Kubernetes manifests: config map, deployment and service (infrastructure/kubernetes/query-service/).
+- Network policies isolating the ingestion service, telemetry processor and query service (infrastructure/kubernetes/network-policies/).
+- OpenTelemetry collector and Jaeger tracing backend manifests (infrastructure/kubernetes/observability/).
+- Monitoring namespace and Helm values for in-cluster Prometheus (infrastructure/kubernetes/monitoring/).
+- Service discovery and cluster DNS conventions (infrastructure/kubernetes/service-discovery.md).

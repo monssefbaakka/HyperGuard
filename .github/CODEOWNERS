@@ -1,0 +1,6 @@
+# Maintainers review changes that affect release controls, infrastructure, and services.
+/.github/                         @monssefbaakka
+/infrastructure/                  @monssefbaakka
+/services/                        @monssefbaakka
+/scripts/                         @monssefbaakka
+/SECURITY.md                      @monssefbaakka

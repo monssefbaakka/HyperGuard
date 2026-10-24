@@ -71,3 +71,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - OpenTelemetry collector and Jaeger tracing backend manifests (infrastructure/kubernetes/observability/).
 - Monitoring namespace and Helm values for in-cluster Prometheus (infrastructure/kubernetes/monitoring/).
 - Service discovery and cluster DNS conventions (infrastructure/kubernetes/service-discovery.md).
+- Prometheus Adapter values and a custom-metrics HPA for the ingestion service (infrastructure/kubernetes/autoscaling/).
+- In-cluster Grafana: storage, Prometheus datasource, dashboard provisioning, deployment and service (infrastructure/kubernetes/monitoring/grafana/).
+- Dependency-free PowerShell YAML reader with unit tests (scripts/lib/PulseStreamYaml.psm1).
+- Autoscaling strategy, custom-metrics autoscaling, autoscaling validation and observability validation guides (docs/architecture/).
+- Security policy (SECURITY.md) and root .gitattributes.
+- GHCR image publishing workflow: Trivy scan, SBOM, cosign signature and digest index, with the image path derived from the repository (`ghcr.io/<owner>/<repo>/<service>`).
+- Digest-based release promotion workflow, release manifest validator and promotion script (scripts/).
+- CODEOWNERS and the main branch protection ruleset (.github/).
+- Image registry, release promotion and supply chain verification guides (docs/).
+
+### Changed
+
+- Platform Deployments now reference `ghcr.io/monssefbaakka/hyperguard/<service>` instead of the upstream PulseStream registry.

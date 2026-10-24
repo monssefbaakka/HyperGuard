@@ -2,6 +2,32 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-24 (release pipeline)
+
+- Brought in the image publishing and release promotion workflows. Both used to hard-code
+  `ghcr.io/<owner>/pulsestream/...`; they now derive the path from the repository, so images
+  land under `ghcr.io/monssefbaakka/hyperguard/<service>`.
+- Pointed the three platform Deployments, the release scripts' default registry prefix, the
+  cosign identity in `docs/security.md` and CODEOWNERS at this repository.
+- `test-security-publishing.ps1`: 27 checks passing. `validate-release-manifests.ps1` passes
+  against the new prefix. `test-release-promotion.ps1` waits for `ci.yml` (it reads it).
+- The Deployments still carry the old `sha-5f5e845` tag, which does not exist in this
+  registry yet: the first `publish-images` run on `main` produces the real tag, and the
+  manifests get pinned to that digest next.
+
+## 2026-10-24
+
+- Added the custom-metrics autoscaling layer: Prometheus Adapter values and an ingestion
+  service HPA that scales on request rate instead of CPU alone.
+- Added in-cluster Grafana (PVC, Prometheus datasource, dashboard provider, provisioned
+  dashboards, deployment, service) with provisioning and deployment notes.
+- Brought in the PowerShell YAML reader the validation scripts build on, with its unit test
+  (`scripts/tests/test-yaml-parsing.ps1`, 32 checks passing on PowerShell 7.6.7).
+- Added the autoscaling strategy / validation, custom-metrics autoscaling and observability
+  validation guides, the security policy and the root `.gitattributes`.
+- All 8 new manifests parse as valid YAML (7 Kubernetes objects plus the adapter Helm
+  values). Not applied to a cluster. The validation scripts referenced by the guides come next.
+
 ## 2026-10-22
 
 - Brought in the query service Kubernetes manifests (config map, deployment, service).

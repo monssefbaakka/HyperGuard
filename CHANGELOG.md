@@ -80,7 +80,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Digest-based release promotion workflow, release manifest validator and promotion script (scripts/).
 - CODEOWNERS and the main branch protection ruleset (.github/).
 - Image registry, release promotion and supply chain verification guides (docs/).
+- CI quality gates (`ci.yml`): Maven verify per service, image build and probe, published-image validation, Compose config, kubeconform, PowerShell offline (PowerShell 7 and 5.1) and kind-backed cluster tests.
+- CodeQL analysis, dependency review, PR/issue alignment check and Dependabot.
+- Issue and pull request templates.
+- PowerShell test runner, release promotion tests and ingestion HPA structure test (scripts/tests/).
 
 ### Changed
 
 - Platform Deployments now reference `ghcr.io/monssefbaakka/hyperguard/<service>` instead of the upstream PulseStream registry.
+
+### Fixed
+
+### Security
+
+- Spring Boot 3.3.5 -> 3.5.16 in all three services, plus patched Tomcat 10.1.61, Jackson 2.21.7, PostgreSQL JDBC 42.7.12 and lz4-java 1.11.4. Clears the 40-44 HIGH/CRITICAL findings per image that blocked publish-images.
+- `.trivyignore` with two reviewed, expiring (2027-01-31) spring-webmvc exceptions that only Spring Framework 7 fixes and that the services cannot reach (no view rendering).
+
+- query-service `/actuator/health` no longer reports 503 when PostgreSQL is unreachable; the DB indicator is opt-in via `PULSESTREAM_DB_HEALTH_ENABLED`, as in telemetry-processor.

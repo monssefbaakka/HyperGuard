@@ -2,6 +2,35 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-24 (dependency CVEs)
+
+- The first `publish-images` run on main was blocked by the Trivy gate: 40-44 HIGH/CRITICAL
+  findings per image, all from Spring Boot 3.3.5's dependencies. The gate did its job.
+- Upgraded to Spring Boot 3.5.16 (down to 11-12 findings), then pinned the patch releases the
+  BOM does not ship yet: Tomcat 10.1.61 (10.1.58 was never published), Jackson 2.21.7,
+  PostgreSQL JDBC 42.7.12, lz4-java 1.11.4.
+- Two spring-webmvc CVEs remain, fixed only in Spring Framework 7 (Spring Boot 4). Neither is
+  reachable (no XsltView, no view rendering, no SSE), so they are in `.trivyignore` with an
+  expiry date. Spring Boot 4 is the real fix and goes on the roadmap.
+- Local results: Trivy 0.69.3 (HIGH/CRITICAL, ignore-unfixed) reports 0 findings on all three
+  images; `mvnw verify` 23 / 43 / 143 tests passing; workflow tests 27 + 147 checks passing.
+
+## 2026-10-24 (CI quality gates)
+
+- Brought in `ci.yml`, CodeQL, dependency review, PR/issue alignment, Dependabot and the
+  issue / PR templates, with the test runner and the release promotion tests that check the
+  workflows, the main ruleset and the promotion gate stay consistent.
+- Added the ingestion HPA structure test so the kind-backed cluster job has a test to run.
+- Local results: `test-release-promotion.ps1` 147 checks passing; `run-all-tests.ps1 -Scope
+  Offline` green on PowerShell 7.6.7 and Windows PowerShell 5.1 (14 files parsed, 3 tests).
+  The cluster test was not run locally (no Kubernetes API); CI runs it on kind.
+- `validate-container-images.ps1` caught a real problem: query-service answered 503 on
+  `/actuator/health` without a database. Fixed by making the DB health indicator opt-in, as
+  telemetry-processor already does. All three images now build and report UP on `/livez`,
+  `/readyz` and `/actuator/health`; query-service suite still 43 tests passing.
+- The services' POMs have no JaCoCo plugin yet, so the coverage summary step reports nothing
+  until it is added.
+
 ## 2026-10-24 (release pipeline)
 
 - Brought in the image publishing and release promotion workflows. Both used to hard-code

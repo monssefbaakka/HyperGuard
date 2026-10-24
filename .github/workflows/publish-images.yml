@@ -142,6 +142,8 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           severity: HIGH,CRITICAL
+          # Reviewed, expiring exceptions only - see the file for each reason.
+          trivyignores: .trivyignore
 
       - name: Generate the scanned image SBOM
         id: sbom

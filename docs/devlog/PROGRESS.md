@@ -2,6 +2,19 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-24 (release pipeline)
+
+- Brought in the image publishing and release promotion workflows. Both used to hard-code
+  `ghcr.io/<owner>/pulsestream/...`; they now derive the path from the repository, so images
+  land under `ghcr.io/monssefbaakka/hyperguard/<service>`.
+- Pointed the three platform Deployments, the release scripts' default registry prefix, the
+  cosign identity in `docs/security.md` and CODEOWNERS at this repository.
+- `test-security-publishing.ps1`: 27 checks passing. `validate-release-manifests.ps1` passes
+  against the new prefix. `test-release-promotion.ps1` waits for `ci.yml` (it reads it).
+- The Deployments still carry the old `sha-5f5e845` tag, which does not exist in this
+  registry yet: the first `publish-images` run on `main` produces the real tag, and the
+  manifests get pinned to that digest next.
+
 ## 2026-10-24
 
 - Added the custom-metrics autoscaling layer: Prometheus Adapter values and an ingestion

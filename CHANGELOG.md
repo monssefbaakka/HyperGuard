@@ -76,3 +76,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Dependency-free PowerShell YAML reader with unit tests (scripts/lib/PulseStreamYaml.psm1).
 - Autoscaling strategy, custom-metrics autoscaling, autoscaling validation and observability validation guides (docs/architecture/).
 - Security policy (SECURITY.md) and root .gitattributes.
+- GHCR image publishing workflow: Trivy scan, SBOM, cosign signature and digest index, with the image path derived from the repository (`ghcr.io/<owner>/<repo>/<service>`).
+- Digest-based release promotion workflow, release manifest validator and promotion script (scripts/).
+- CODEOWNERS and the main branch protection ruleset (.github/).
+- Image registry, release promotion and supply chain verification guides (docs/).
+
+### Changed
+
+- Platform Deployments now reference `ghcr.io/monssefbaakka/hyperguard/<service>` instead of the upstream PulseStream registry.

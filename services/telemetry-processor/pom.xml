@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>17</java.version>
-        <opentelemetry.instrumentation.version>2.29.0</opentelemetry.instrumentation.version>
+        <opentelemetry.instrumentation.version>2.32.0</opentelemetry.instrumentation.version>
         <!-- Patch releases ahead of the Spring Boot BOM; they clear HIGH/CRITICAL findings
              from the publish-images Trivy gate. Drop each once Spring Boot ships it. -->
         <tomcat.version>10.1.61</tomcat.version>

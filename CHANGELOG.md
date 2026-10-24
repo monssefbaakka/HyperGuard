@@ -71,3 +71,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - OpenTelemetry collector and Jaeger tracing backend manifests (infrastructure/kubernetes/observability/).
 - Monitoring namespace and Helm values for in-cluster Prometheus (infrastructure/kubernetes/monitoring/).
 - Service discovery and cluster DNS conventions (infrastructure/kubernetes/service-discovery.md).
+- Prometheus Adapter values and a custom-metrics HPA for the ingestion service (infrastructure/kubernetes/autoscaling/).
+- In-cluster Grafana: storage, Prometheus datasource, dashboard provisioning, deployment and service (infrastructure/kubernetes/monitoring/grafana/).
+- Dependency-free PowerShell YAML reader with unit tests (scripts/lib/PulseStreamYaml.psm1).
+- Autoscaling strategy, custom-metrics autoscaling, autoscaling validation and observability validation guides (docs/architecture/).
+- Security policy (SECURITY.md) and root .gitattributes.

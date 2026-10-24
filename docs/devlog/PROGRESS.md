@@ -2,6 +2,22 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-24 (CI quality gates)
+
+- Brought in `ci.yml`, CodeQL, dependency review, PR/issue alignment, Dependabot and the
+  issue / PR templates, with the test runner and the release promotion tests that check the
+  workflows, the main ruleset and the promotion gate stay consistent.
+- Added the ingestion HPA structure test so the kind-backed cluster job has a test to run.
+- Local results: `test-release-promotion.ps1` 147 checks passing; `run-all-tests.ps1 -Scope
+  Offline` green on PowerShell 7.6.7 and Windows PowerShell 5.1 (14 files parsed, 3 tests).
+  The cluster test was not run locally (no Kubernetes API); CI runs it on kind.
+- `validate-container-images.ps1` caught a real problem: query-service answered 503 on
+  `/actuator/health` without a database. Fixed by making the DB health indicator opt-in, as
+  telemetry-processor already does. All three images now build and report UP on `/livez`,
+  `/readyz` and `/actuator/health`; query-service suite still 43 tests passing.
+- The services' POMs have no JaCoCo plugin yet, so the coverage summary step reports nothing
+  until it is added.
+
 ## 2026-10-24 (release pipeline)
 
 - Brought in the image publishing and release promotion workflows. Both used to hard-code

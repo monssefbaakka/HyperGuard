@@ -80,7 +80,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Digest-based release promotion workflow, release manifest validator and promotion script (scripts/).
 - CODEOWNERS and the main branch protection ruleset (.github/).
 - Image registry, release promotion and supply chain verification guides (docs/).
+- CI quality gates (`ci.yml`): Maven verify per service, image build and probe, published-image validation, Compose config, kubeconform, PowerShell offline (PowerShell 7 and 5.1) and kind-backed cluster tests.
+- CodeQL analysis, dependency review, PR/issue alignment check and Dependabot.
+- Issue and pull request templates.
+- PowerShell test runner, release promotion tests and ingestion HPA structure test (scripts/tests/).
 
 ### Changed
 
 - Platform Deployments now reference `ghcr.io/monssefbaakka/hyperguard/<service>` instead of the upstream PulseStream registry.
+
+### Fixed
+
+- query-service `/actuator/health` no longer reports 503 when PostgreSQL is unreachable; the DB indicator is opt-in via `PULSESTREAM_DB_HEALTH_ENABLED`, as in telemetry-processor.

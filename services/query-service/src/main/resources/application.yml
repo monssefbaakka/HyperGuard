@@ -99,6 +99,13 @@ management:
       probes:
         enabled: true
         add-additional-paths: true
+  health:
+    # Same convention as telemetry-processor: keep PostgreSQL out of the aggregate
+    # /actuator/health by default so a database outage does not mark the API DOWN
+    # (and the image can be probed without a database). Set
+    # PULSESTREAM_DB_HEALTH_ENABLED=true to include it.
+    db:
+      enabled: ${PULSESTREAM_DB_HEALTH_ENABLED:false}
   prometheus:
     metrics:
       export:

@@ -1,0 +1,15 @@
+# Findings accepted by the publish-images Trivy gate (.github/workflows/publish-images.yml).
+#
+# Every entry needs a reason it does not apply, the version that fixes it, and an
+# expiry date. Trivy stops ignoring an entry after its `exp:` date, so the gate
+# fails again and the decision has to be revisited rather than forgotten.
+
+# Spring Framework spring-webmvc 6.2.19 (Spring Boot 3.5.16). Fixed only in
+# Spring Framework 7.0.9, i.e. a Spring Boot 4 migration. Not reachable here:
+# the services are JSON REST APIs with no view rendering at all - no XsltView,
+# no view resolvers or template engines, no Server-Sent Events.
+#
+# CVE-2026-47884: RCE/SSRF via XsltView with a "/**" mapping that renders views.
+CVE-2026-47884 exp:2027-01-31
+# CVE-2026-47890: SSE stream corruption with view fragments.
+CVE-2026-47890 exp:2027-01-31

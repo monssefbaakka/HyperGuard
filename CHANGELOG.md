@@ -91,4 +91,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+### Security
+
+- Spring Boot 3.3.5 -> 3.5.16 in all three services, plus patched Tomcat 10.1.61, Jackson 2.21.7, PostgreSQL JDBC 42.7.12 and lz4-java 1.11.4. Clears the 40-44 HIGH/CRITICAL findings per image that blocked publish-images.
+- `.trivyignore` with two reviewed, expiring (2027-01-31) spring-webmvc exceptions that only Spring Framework 7 fixes and that the services cannot reach (no view rendering).
+
 - query-service `/actuator/health` no longer reports 503 when PostgreSQL is unreachable; the DB indicator is opt-in via `PULSESTREAM_DB_HEALTH_ENABLED`, as in telemetry-processor.

@@ -2,6 +2,19 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-24 (dependency CVEs)
+
+- The first `publish-images` run on main was blocked by the Trivy gate: 40-44 HIGH/CRITICAL
+  findings per image, all from Spring Boot 3.3.5's dependencies. The gate did its job.
+- Upgraded to Spring Boot 3.5.16 (down to 11-12 findings), then pinned the patch releases the
+  BOM does not ship yet: Tomcat 10.1.61 (10.1.58 was never published), Jackson 2.21.7,
+  PostgreSQL JDBC 42.7.12, lz4-java 1.11.4.
+- Two spring-webmvc CVEs remain, fixed only in Spring Framework 7 (Spring Boot 4). Neither is
+  reachable (no XsltView, no view rendering, no SSE), so they are in `.trivyignore` with an
+  expiry date. Spring Boot 4 is the real fix and goes on the roadmap.
+- Local results: Trivy 0.69.3 (HIGH/CRITICAL, ignore-unfixed) reports 0 findings on all three
+  images; `mvnw verify` 23 / 43 / 143 tests passing; workflow tests 27 + 147 checks passing.
+
 ## 2026-10-24 (CI quality gates)
 
 - Brought in `ci.yml`, CodeQL, dependency review, PR/issue alignment, Dependabot and the

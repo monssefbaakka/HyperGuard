@@ -2,6 +2,17 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-25 (Kafka, connectivity and HPA validators)
+
+- Brought in the Kafka validators (Strimzi cluster, broker health, DLQ topic, DLQ pipeline,
+  event replay), the service connectivity and external ingestion access checks, the network
+  policy validator and the custom-metrics / telemetry-processor HPA validators, with their
+  shared modules (`PulseStreamConnectivity`, `PulseStreamAutoscaling`) and regression tests.
+- Local results: `run-all-tests.ps1` on PowerShell 7.6.7 parsed 33 files with 0 failures and
+  ran 11 test files with 0 failures. The two cluster-only tests (ingestion HPA, network policy
+  structure) were skipped locally (no Kubernetes API); CI runs them on kind.
+- The live validators need a running cluster and were not run here.
+
 ## 2026-10-24 (dependency CVEs)
 
 - The first `publish-images` run on main was blocked by the Trivy gate: 40-44 HIGH/CRITICAL

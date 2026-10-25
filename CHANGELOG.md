@@ -84,6 +84,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - CodeQL analysis, dependency review, PR/issue alignment check and Dependabot.
 - Issue and pull request templates.
 - PowerShell test runner, release promotion tests and ingestion HPA structure test (scripts/tests/).
+- Kafka, DLQ pipeline and event replay validation scripts.
+- Service connectivity, external ingestion access and network policy validation scripts.
+- Custom-metrics and telemetry-processor HPA validation scripts with offline structure tests.
 
 ### Changed
 

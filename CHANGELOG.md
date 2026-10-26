@@ -87,6 +87,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Kafka, DLQ pipeline and event replay validation scripts.
 - Service connectivity, external ingestion access and network policy validation scripts.
 - Custom-metrics and telemetry-processor HPA validation scripts with offline structure tests.
+- Prometheus, Grafana, distributed tracing and observability stack validation scripts.
+- Autoscaling behaviour analysis under generated load (`validate-autoscaling-behavior.ps1`).
 
 ### Changed
 

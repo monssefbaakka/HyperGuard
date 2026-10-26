@@ -2,6 +2,22 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-10-26 (observability and autoscaling-behaviour validators)
+
+- Brought in the last validation scripts: Prometheus scrape config and metrics, Grafana
+  deployment / datasource / dashboard provisioning, distributed tracing, the observability
+  stack check and the autoscaling behaviour analysis, with their shared modules and tests.
+  This completes `scripts/`.
+- The dashboard provisioning test failed on first run, and correctly: the Compose dashboards
+  were redesigned (17 and 13 panels) but the cluster ConfigMap still has the old 4 and 3.
+  The test now pins both panel ID sets (`$pendingPanelDivergence`), as the dashboards README
+  already describes, so any further drift on either side still fails. Porting the cluster
+  copy is the follow-up.
+- Local results: `run-all-tests.ps1` on PowerShell 7.6.7 parsed 56 files with 0 failures and
+  ran 19 test files with 0 failures (2 cluster-only tests skipped, no Kubernetes API); on
+  Windows PowerShell 5.1, 17 test files with 0 failures.
+- The live validators need a running cluster and were not run here.
+
 ## 2026-10-25 (Kafka, connectivity and HPA validators)
 
 - Brought in the Kafka validators (Strimzi cluster, broker health, DLQ topic, DLQ pipeline,

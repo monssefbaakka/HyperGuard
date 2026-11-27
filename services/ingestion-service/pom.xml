@@ -20,6 +20,7 @@
     <properties>
         <java.version>17</java.version>
         <opentelemetry.instrumentation.version>2.29.0</opentelemetry.instrumentation.version>
+        <resilience4j.version>2.2.0</resilience4j.version>
         <!-- Patch releases ahead of the Spring Boot BOM; they clear HIGH/CRITICAL findings
              from the publish-images Trivy gate. Drop each once Spring Boot ships it. -->
         <tomcat.version>10.1.61</tomcat.version>
@@ -74,6 +75,15 @@
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Circuit breaker and bulkhead around the synchronous Kafka publish path.
+             The Boot 3 starter binds resilience4j.* configuration, exposes
+             Micrometer metrics and contributes actuator health details. -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>${resilience4j.version}</version>
         </dependency>
 
         <dependency>

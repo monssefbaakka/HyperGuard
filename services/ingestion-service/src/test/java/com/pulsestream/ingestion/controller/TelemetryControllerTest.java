@@ -2,6 +2,8 @@ package com.pulsestream.ingestion.controller;
 
 import com.pulsestream.ingestion.dto.TelemetryIngestionRequestDto;
 import com.pulsestream.ingestion.exception.TelemetryPublishingException;
+import com.pulsestream.ingestion.exception.TelemetryPublishingRejectedException;
+import java.time.Duration;
 import com.pulsestream.ingestion.mapper.TelemetryEventMapper;
 import com.pulsestream.ingestion.model.TelemetryEvent;
 import com.pulsestream.ingestion.service.KafkaProducerService;
@@ -21,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -154,5 +157,46 @@ class TelemetryControllerTest {
 
         verify(telemetryEventMapper).toModel(any(TelemetryIngestionRequestDto.class));
         verify(kafkaProducerService).publishTelemetryEvent(telemetryEvent);
+    }
+
+    @Test
+    @DisplayName("should return 503 with Retry-After when the circuit breaker rejects the publish")
+    void shouldReturnRetryAfterWhenPublishIsRejected() throws Exception {
+        String requestBody = """
+        {
+          "eventId": "evt-001",
+          "tenantId": "factory-01",
+          "eventType": "telemetry.reading",
+          "timestamp": "2026-03-31T12:00:00Z",
+          "source": "sensor-gateway",
+          "version": "1.0",
+          "payload": {
+            "deviceId": "sensor-1042",
+            "deviceType": "temperature-sensor",
+            "metric": "temperature",
+            "value": 28.4,
+            "unit": "C",
+            "location": "zone-a"
+          }
+        }
+        """;
+
+        TelemetryEvent telemetryEvent = mock(TelemetryEvent.class);
+        when(telemetryEventMapper.toModel(any(TelemetryIngestionRequestDto.class)))
+                .thenReturn(telemetryEvent);
+        doThrow(new TelemetryPublishingRejectedException(
+                "Kafka publishing is temporarily suspended by the circuit breaker",
+                Duration.ofMillis(14_200),
+                null
+        )).when(kafkaProducerService).publishTelemetryEvent(telemetryEvent);
+
+        mockMvc.perform(post("/api/v1/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "15"))
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.message")
+                        .value("Telemetry ingestion is temporarily throttled. Retry after the indicated delay."));
     }
 }

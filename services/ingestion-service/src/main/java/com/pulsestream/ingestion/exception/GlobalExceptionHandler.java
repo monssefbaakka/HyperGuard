@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -67,6 +68,31 @@ public class GlobalExceptionHandler {
 
         log.warn("Malformed JSON received at {}: {}", request.getRequestURI(), ex.getMessage());
         return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * Handles publishes refused by the circuit breaker or bulkhead. Nothing reached Kafka,
+     * so the response carries a {@code Retry-After} hint. Logged without a stack trace:
+     * while the breaker is open every request lands here, and the cause is already known.
+     */
+    @ExceptionHandler(TelemetryPublishingRejectedException.class)
+    public ResponseEntity<ErrorResponse> handleTelemetryPublishingRejectedException(
+            TelemetryPublishingRejectedException ex, HttpServletRequest request) {
+
+        ErrorResponse response = new ErrorResponse(
+                Instant.now(),
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Service Unavailable",
+                "Telemetry ingestion is temporarily throttled. Retry after the indicated delay.",
+                request.getRequestURI(),
+                List.of()
+        );
+
+        long retryAfterSeconds = Math.max(1L, (ex.getRetryAfter().toMillis() + 999L) / 1000L);
+        log.warn("Publishing rejected for request to {}: {}", request.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(retryAfterSeconds))
+                .body(response);
     }
 
     /**

@@ -2,6 +2,22 @@
 
 Running log of day-to-day notes on the HyperGuard Sentinel project - what changed, what was investigated, what's next.
 
+## 2026-11-27 (ingestion circuit breaker)
+
+- Problem: with Kafka down, each `POST /api/v1/events` blocked for the 5s publish timeout
+  plus a 5s DLQ attempt, so a burst of requests could pin every Tomcat thread.
+- Added Resilience4j to the ingestion service. The raw-topic send runs inside a bulkhead
+  (50 concurrent publishes) wrapping a circuit breaker (opens at 50% failures or 80% calls
+  slower than 3s over 20 calls, half-open after 15s). While open, requests get 503 with
+  `Retry-After` immediately and skip the DLQ, since nothing reached Kafka.
+- Serialization and record-too-large errors do not count against the breaker; they are
+  record problems, not broker health.
+- No Resilience4j Retry: the Kafka producer already retries, and stacking both would
+  multiply latency.
+- The breaker shows in `/actuator/health` details but cannot turn the probes DOWN.
+- Local results: `mvnw.cmd verify` on the ingestion service, 32 tests, 0 failures.
+  Not yet exercised against a live broker outage.
+
 ## 2026-10-26 (observability and autoscaling-behaviour validators)
 
 - Brought in the last validation scripts: Prometheus scrape config and metrics, Grafana

@@ -1,5 +1,9 @@
 package com.pulsestream.ingestion;
 
+import com.pulsestream.ingestion.service.KafkaProducerService;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import org.apache.kafka.common.errors.SerializationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +22,9 @@ class IngestionServiceApplicationTests {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private CircuitBreakerRegistry circuitBreakerRegistry;
 
     @Test
     void contextLoads() {
@@ -39,5 +46,23 @@ class IngestionServiceApplicationTests {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains("# HELP");
+    }
+
+    @Test
+    void kafkaCircuitBreakerIsBoundFromConfigurationAndExported() {
+        CircuitBreakerConfig config = circuitBreakerRegistry
+                .circuitBreaker(KafkaProducerService.KAFKA_PUBLISH)
+                .getCircuitBreakerConfig();
+
+        assertThat(config.getSlidingWindowSize()).isEqualTo(20);
+        assertThat(config.getMinimumNumberOfCalls()).isEqualTo(10);
+        assertThat(config.getRecordExceptionPredicate().test(new SerializationException("bad record"))).isFalse();
+
+        ResponseEntity<String> metrics =
+                restTemplate.getForEntity("http://localhost:" + port + "/actuator/prometheus", String.class);
+        assertThat(metrics.getBody())
+                .contains("resilience4j_circuitbreaker_state")
+                .contains("name=\"kafka-publish\"")
+                .contains("resilience4j_bulkhead_available_concurrent_calls");
     }
 }

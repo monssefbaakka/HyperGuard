@@ -89,6 +89,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Custom-metrics and telemetry-processor HPA validation scripts with offline structure tests.
 - Prometheus, Grafana, distributed tracing and observability stack validation scripts.
 - Autoscaling behaviour analysis under generated load (`validate-autoscaling-behavior.ps1`).
+- Resilience4j circuit breaker and bulkhead on the ingestion service's Kafka publish path:
+  503 with `Retry-After` while the breaker is open, breaker state and metrics on actuator.
 
 ### Changed
 

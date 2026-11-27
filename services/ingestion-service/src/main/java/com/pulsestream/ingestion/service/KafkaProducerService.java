@@ -3,8 +3,15 @@ package com.pulsestream.ingestion.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pulsestream.ingestion.config.PulsestreamKafkaProperties;
 import com.pulsestream.ingestion.exception.TelemetryPublishingException;
+import com.pulsestream.ingestion.exception.TelemetryPublishingRejectedException;
 import com.pulsestream.ingestion.model.DeadLetterEvent;
 import com.pulsestream.ingestion.model.TelemetryEvent;
+import io.github.resilience4j.bulkhead.Bulkhead;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -27,6 +34,12 @@ public class KafkaProducerService {
 
     private static final String SOURCE_SERVICE = "ingestion-service";
 
+    /** Name of the circuit breaker and bulkhead instances in {@code resilience4j.*} config. */
+    public static final String KAFKA_PUBLISH = "kafka-publish";
+
+    /** Retry hint returned when the bulkhead is saturated; capacity frees up quickly. */
+    private static final Duration BULKHEAD_RETRY_AFTER = Duration.ofSeconds(1);
+
     private final KafkaTemplate<String, TelemetryEvent> telemetryKafkaTemplate;
 
     private final KafkaTemplate<String, String> dlqKafkaTemplate;
@@ -37,14 +50,28 @@ public class KafkaProducerService {
 
     private final Clock clock;
 
+    private final CircuitBreaker circuitBreaker;
+
+    private final Bulkhead bulkhead;
+
     @Autowired
     public KafkaProducerService(
             KafkaTemplate<String, TelemetryEvent> telemetryKafkaTemplate,
             KafkaTemplate<String, String> dlqKafkaTemplate,
             ObjectMapper objectMapper,
-            PulsestreamKafkaProperties kafkaProperties
+            PulsestreamKafkaProperties kafkaProperties,
+            CircuitBreakerRegistry circuitBreakerRegistry,
+            BulkheadRegistry bulkheadRegistry
     ) {
-        this(telemetryKafkaTemplate, dlqKafkaTemplate, objectMapper, kafkaProperties, Clock.systemUTC());
+        this(
+                telemetryKafkaTemplate,
+                dlqKafkaTemplate,
+                objectMapper,
+                kafkaProperties,
+                Clock.systemUTC(),
+                circuitBreakerRegistry.circuitBreaker(KAFKA_PUBLISH),
+                bulkheadRegistry.bulkhead(KAFKA_PUBLISH)
+        );
     }
 
     KafkaProducerService(
@@ -54,11 +81,33 @@ public class KafkaProducerService {
             PulsestreamKafkaProperties kafkaProperties,
             Clock clock
     ) {
+        this(
+                telemetryKafkaTemplate,
+                dlqKafkaTemplate,
+                objectMapper,
+                kafkaProperties,
+                clock,
+                CircuitBreaker.ofDefaults(KAFKA_PUBLISH),
+                Bulkhead.ofDefaults(KAFKA_PUBLISH)
+        );
+    }
+
+    KafkaProducerService(
+            KafkaTemplate<String, TelemetryEvent> telemetryKafkaTemplate,
+            KafkaTemplate<String, String> dlqKafkaTemplate,
+            ObjectMapper objectMapper,
+            PulsestreamKafkaProperties kafkaProperties,
+            Clock clock,
+            CircuitBreaker circuitBreaker,
+            Bulkhead bulkhead
+    ) {
         this.telemetryKafkaTemplate = telemetryKafkaTemplate;
         this.dlqKafkaTemplate = dlqKafkaTemplate;
         this.objectMapper = objectMapper;
         this.kafkaProperties = kafkaProperties;
         this.clock = clock;
+        this.circuitBreaker = circuitBreaker;
+        this.bulkhead = bulkhead;
     }
 
     public void publishTelemetryEvent(TelemetryEvent telemetryEvent) {
@@ -67,8 +116,46 @@ public class KafkaProducerService {
         String rawTopic = kafkaProperties.getTopics().getRaw();
         String messageKey = resolveMessageKey(telemetryEvent);
 
+        // The bulkhead wraps the breaker so a saturated bulkhead rejects the call before
+        // the breaker sees it; a rejection is back-pressure, not a broker failure.
+        Runnable guardedPublish = Bulkhead.decorateRunnable(
+                bulkhead,
+                CircuitBreaker.decorateRunnable(
+                        circuitBreaker,
+                        () -> sendBlocking(telemetryKafkaTemplate, rawTopic, messageKey, telemetryEvent)
+                )
+        );
+
         try {
-            sendBlocking(telemetryKafkaTemplate, rawTopic, messageKey, telemetryEvent);
+            guardedPublish.run();
+        } catch (CallNotPermittedException rejected) {
+            // The breaker is open: Kafka has been failing, so fail fast instead of tying up
+            // a request thread for the full publish timeout. Nothing was sent, so there is
+            // nothing to dead-letter; the client is told when to retry.
+            log.warn(
+                    "Rejected telemetry event eventId={} key={}: circuit breaker '{}' is {}",
+                    telemetryEvent.eventId(),
+                    messageKey,
+                    circuitBreaker.getName(),
+                    circuitBreaker.getState()
+            );
+            throw new TelemetryPublishingRejectedException(
+                    "Kafka publishing is temporarily suspended by the circuit breaker",
+                    openStateRetryAfter(),
+                    rejected
+            );
+        } catch (BulkheadFullException rejected) {
+            log.warn(
+                    "Rejected telemetry event eventId={} key={}: publish bulkhead '{}' is saturated",
+                    telemetryEvent.eventId(),
+                    messageKey,
+                    bulkhead.getName()
+            );
+            throw new TelemetryPublishingRejectedException(
+                    "Kafka publishing capacity is temporarily exhausted",
+                    BULKHEAD_RETRY_AFTER,
+                    rejected
+            );
         } catch (KafkaSendFailure failure) {
             Throwable cause = failure.getCause();
             log.error(
@@ -183,6 +270,13 @@ public class KafkaProducerService {
                 "telemetryEvent must contain a non-blank tenantId when eventId is blank");
 
         return telemetryEvent.tenantId().trim();
+    }
+
+    private Duration openStateRetryAfter() {
+        long waitMillis = circuitBreaker.getCircuitBreakerConfig()
+                .getWaitIntervalFunctionInOpenState()
+                .apply(1);
+        return Duration.ofMillis(Math.max(waitMillis, 1000L));
     }
 
     private long publishTimeoutMillis() {

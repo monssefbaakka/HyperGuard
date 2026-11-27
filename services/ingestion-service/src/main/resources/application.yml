@@ -25,6 +25,40 @@ management:
     metrics:
       export:
         enabled: true
+  health:
+    # Show the Kafka circuit breaker state in /actuator/health details. The breaker is
+    # configured with allow-health-indicator-to-fail=false, so an open breaker is
+    # reported but never turns the aggregate (or the probes) DOWN.
+    circuitbreakers:
+      enabled: true
+
+# Fault tolerance for the synchronous publish path (POST /api/v1/events -> Kafka).
+# The Kafka producer already retries transient errors internally (retries, delivery-timeout),
+# so no Resilience4j Retry is layered on top; that would multiply request latency.
+resilience4j:
+  circuitbreaker:
+    instances:
+      kafka-publish:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: ${PULSESTREAM_KAFKA_CB_WINDOW_SIZE:20}
+        minimum-number-of-calls: ${PULSESTREAM_KAFKA_CB_MIN_CALLS:10}
+        failure-rate-threshold: ${PULSESTREAM_KAFKA_CB_FAILURE_RATE:50}
+        # A publish slower than this is "slow"; if most calls are slow the broker is
+        # degraded and the breaker opens before the 5s publish timeout piles up threads.
+        slow-call-duration-threshold: ${PULSESTREAM_KAFKA_CB_SLOW_CALL_DURATION:3s}
+        slow-call-rate-threshold: ${PULSESTREAM_KAFKA_CB_SLOW_CALL_RATE:80}
+        wait-duration-in-open-state: ${PULSESTREAM_KAFKA_CB_OPEN_WAIT:15s}
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-failure-predicate: com.pulsestream.ingestion.resilience.BrokerFailurePredicate
+        register-health-indicator: true
+        allow-health-indicator-to-fail: false
+  bulkhead:
+    instances:
+      kafka-publish:
+        # Caps request threads blocked on Kafka so a slow broker cannot exhaust Tomcat's pool.
+        max-concurrent-calls: ${PULSESTREAM_KAFKA_BULKHEAD_MAX_CONCURRENT:50}
+        max-wait-duration: ${PULSESTREAM_KAFKA_BULKHEAD_MAX_WAIT:100ms}
 
 logging:
   level:
